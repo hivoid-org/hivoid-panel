@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
+  Search, Plus, Trash2, Edit3, X, RefreshCw, Loader2, UserCheck, Fingerprint,
   Calendar, Download, Upload, Copy, Share2, Check, FileJson, Link, Zap
 } from 'lucide-react';
 import { users as usersApi } from '../api';
