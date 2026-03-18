@@ -2,11 +2,15 @@
 User management routes: CRUD + search + enable/disable.
 """
 import uuid
+import json
+from pathlib import Path
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
+
+from app.config import settings
 
 from app.database import get_db
 from app.models import User, Admin
@@ -43,6 +47,25 @@ def list_users(
         query = query.filter(User.enabled == enabled)
 
     users = query.order_by(User.created_at.desc()).offset(skip).limit(limit).all()
+
+    # Merge live usage from .usage.json
+    usage_map = {}
+    config_path = Path(settings.HIVOID_CONFIG_PATH)
+    usage_path = config_path.with_suffix(".usage.json")
+    if usage_path.exists():
+        try:
+            usage_data = json.loads(usage_path.read_text())
+            for u_usage in usage_data.get("users", []):
+                usage_map[u_usage["uuid"]] = u_usage
+        except Exception:
+            pass
+
+    for u in users:
+        live = usage_map.get(u.uuid)
+        if live:
+            u.bytes_in = live.get("bytes_in", u.bytes_in)
+            u.bytes_out = live.get("bytes_out", u.bytes_out)
+
     return users
 
 
@@ -167,3 +190,73 @@ def toggle_user(
     db.refresh(user)
     sync_server_config(db)
     return user
+
+
+@router.get("/{user_id}/config")
+def get_user_config_data(
+    user_id: int,
+    request: Request,
+    admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """Generate raw JSON and subscription URL for a user."""
+    from app.config import settings
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Construct client.json content
+    client_json = {
+        "uuid": user.uuid,
+        "server": settings.SERVER_ADDRESS or request.base_url.hostname,
+        "port": 4433, # Standard Core port
+        "mode": user.mode or "performance",
+        "obfs": user.obfs or "none",
+        "socks_port": 1080,
+        "dns_port": 5353,
+        "dns_upstream": "1.1.1.1:53",
+        "insecure": True,
+        "name": user.name or user.email or "HiVoid Configuration"
+    }
+
+    # Construct subscription URL
+    base_url = str(request.base_url).rstrip("/")
+    sub_url = f"{base_url}/api/users/sub/{user.uuid}"
+
+    # Construct hivoid:// Protocol Link
+    import urllib.parse
+    safe_name = urllib.parse.quote(user.name or user.email or "HiVoid")
+    protocol_link = f"hivoid://{user.uuid}@{client_json['server']}:{client_json['port']}?mode={client_json['mode']}&obfs={client_json['obfs']}#{safe_name}"
+
+    return {
+        "json": client_json,
+        "url": sub_url,
+        "protocol": protocol_link
+    }
+
+
+@router.get("/sub/{user_uuid}", tags=["Public"])
+def public_config_subscription(
+    user_uuid: str,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """Public endpoint for clients to fetch their JSON config via UUID."""
+    from app.config import settings
+    user = db.query(User).filter(User.uuid == user_uuid).first()
+    if not user or not user.enabled:
+        raise HTTPException(status_code=404, detail="Configuration not found or user disabled.")
+
+    client_json = {
+        "uuid": user.uuid,
+        "server": settings.SERVER_ADDRESS or request.base_url.hostname,
+        "port": 4433,
+        "mode": user.mode or "performance",
+        "obfs": user.obfs or "none",
+        "socks_port": 1080,
+        "dns_port": 5353,
+        "dns_upstream": "1.1.1.1:53",
+        "insecure": True,
+        "name": user.name or user.email or "HiVoid Client"
+    }
+    return client_json

@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
-  Search, Plus, Trash2, Edit3, X, RefreshCw, Loader2, UserCheck, Fingerprint,
-  Calendar, Download, Upload, Copy
+  Calendar, Download, Upload, Copy, Share2, Check, FileJson, Link, Zap
 } from 'lucide-react';
 import { users as usersApi } from '../api';
 import clsx from 'clsx';
@@ -26,6 +25,8 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editUser, setEditUser] = useState(null);
+  const [configUser, setConfigUser] = useState(null);
+  const [showConfigModal, setShowConfigModal] = useState(false);
   const [toast, setToast] = useState(null);
 
   const load = useCallback(async () => {
@@ -163,6 +164,9 @@ export default function UsersPage() {
                       <button onClick={() => { setEditUser(u); setShowModal(true); }} className="p-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors">
                         <Edit3 className="w-4 h-4" />
                       </button>
+                      <button onClick={() => { setConfigUser(u); setShowConfigModal(true); }} className="p-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 hover:text-primary transition-colors" title="Configuration">
+                        <Share2 className="w-4 h-4" />
+                      </button>
                       <button onClick={() => deleteUser(u)} className="p-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 hover:text-danger transition-colors">
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -180,6 +184,14 @@ export default function UsersPage() {
           user={editUser}
           onClose={() => setShowModal(false)}
           onSaved={() => { setShowModal(false); load(); notify(editUser ? 'User updated' : 'User created'); }}
+        />
+      )}
+
+      {showConfigModal && (
+        <ConfigModal
+          user={configUser}
+          onClose={() => setShowConfigModal(false)}
+          notify={notify}
         />
       )}
     </div>
@@ -301,6 +313,99 @@ function Field({ label, children }) {
     <div>
       <label className="block text-xs font-medium text-neutral-400 mb-1.5 ml-0.5">{label}</label>
       {children}
+    </div>
+  );
+}
+
+function ConfigModal({ user, onClose, notify }) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [copied, setCopied] = useState(null);
+
+  useEffect(() => {
+    usersApi.getConfig(user.id)
+      .then(setData)
+      .catch(e => notify(e.message, false))
+      .finally(() => setLoading(false));
+  }, [user.id, notify]);
+
+  const copy = (text, type) => {
+    navigator.clipboard.writeText(text);
+    setCopied(type);
+    setTimeout(() => setCopied(null), 2000);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/30 dark:bg-black/50" onClick={onClose} />
+      <div className="relative w-full max-w-lg bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-6 animate-in">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h3 className="text-base font-bold">Client Configuration</h3>
+            <p className="text-xs text-neutral-500 mt-0.5">{user.name}</p>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400"><X className="w-4 h-4" /></button>
+        </div>
+
+        {loading ? (
+          <div className="py-12 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-neutral-300" /></div>
+        ) : (
+          <div className="space-y-6">
+            {/* JSON Output */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs font-medium text-neutral-400 px-1">
+                <span className="flex items-center gap-1.5"><FileJson className="w-3.5 h-3.5" /> Client JSON</span>
+                <button 
+                  onClick={() => copy(JSON.stringify(data.json, null, 2), 'json')} 
+                  className="text-primary hover:underline flex items-center gap-1"
+                >
+                  {copied === 'json' ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                  {copied === 'json' ? 'Copied' : 'Copy'}
+                </button>
+              </div>
+              <pre className="bg-neutral-50 dark:bg-neutral-950 p-4 rounded-xl text-[11px] font-mono text-neutral-700 dark:text-neutral-300 overflow-x-auto max-h-48 border border-neutral-100 dark:border-neutral-800">
+                {JSON.stringify(data.json, null, 2)}
+              </pre>
+            </div>
+
+            {/* URL Output */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs font-medium text-neutral-400 px-1">
+                <span className="flex items-center gap-1.5"><Link className="w-3.5 h-3.5" /> Subscription URL</span>
+                <button 
+                  onClick={() => copy(data.url, 'url')} 
+                  className="text-primary hover:underline flex items-center gap-1"
+                >
+                  {copied === 'url' ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                  {copied === 'url' ? 'Copied' : 'Copy'}
+                </button>
+              </div>
+              <div className="flex items-center gap-2 bg-neutral-50 dark:bg-neutral-950 p-3 rounded-xl border border-neutral-100 dark:border-neutral-800">
+                <code className="text-[11px] font-mono text-neutral-500 truncate flex-1">{data.url}</code>
+              </div>
+            </div>
+
+            {/* Protocol Link Output */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs font-medium text-neutral-400 px-1">
+                <span className="flex items-center gap-1.5"><Zap className="w-3.5 h-3.5 text-yellow-500" /> Protocol Link (One-Click)</span>
+                <button 
+                  onClick={() => copy(data.protocol, 'protocol')} 
+                  className="text-primary hover:underline flex items-center gap-1"
+                >
+                  {copied === 'protocol' ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                  {copied === 'protocol' ? 'Copied' : 'Copy'}
+                </button>
+              </div>
+              <div className="flex items-center gap-2 bg-neutral-50 dark:bg-neutral-950 p-3 rounded-xl border border-neutral-100 dark:border-neutral-800">
+                <code className="text-[11px] font-mono text-neutral-500 truncate flex-1">{data.protocol}</code>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <button onClick={onClose} className="btn-secondary w-full h-10 mt-6">Close</button>
+      </div>
     </div>
   );
 }

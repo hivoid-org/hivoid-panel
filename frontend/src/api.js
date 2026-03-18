@@ -81,6 +81,7 @@ export const users = {
   delete: (id) => request(`/users/${id}`, { method: 'DELETE' }),
   toggle: (id) => request(`/users/${id}/toggle`, { method: 'POST' }),
   generateUuid: () => request('/users/generate-uuid'),
+  getConfig: (id) => request(`/users/${id}/config`),
 };
 
 // ── System ────────────────────────────────────────────────────
