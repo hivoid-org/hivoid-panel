@@ -74,7 +74,7 @@ def sync_server_config(db: Session) -> bool:
 
     # Load usage mapping from core's usage file
     usage_map = {}
-    usage_path = config_path.with_suffix(".usage.json")
+    usage_path = Path(str(config_path) + ".usage.json")
     if usage_path.exists():
         try:
             usage_data = json.loads(usage_path.read_text())

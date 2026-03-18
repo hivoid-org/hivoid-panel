@@ -51,7 +51,7 @@ def list_users(
     # Merge live usage from .usage.json
     usage_map = {}
     config_path = Path(settings.HIVOID_CONFIG_PATH)
-    usage_path = config_path.with_suffix(".usage.json")
+    usage_path = Path(str(config_path) + ".usage.json")
     if usage_path.exists():
         try:
             usage_data = json.loads(usage_path.read_text())
