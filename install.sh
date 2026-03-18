@@ -25,7 +25,7 @@ ENV_FILE="${BACKEND_DIR}/.env"
 DB_PATH="${DATA_DIR}/hivoid_panel.db"
 SERVICE_BACKEND="hivoid-panel-backend"
 PANEL_REPO="hivoid-org/hivoid-panel"
-CORE_REPO=" "
+CORE_REPO="hivoid-org/hivoid-core"
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────
 info()    { echo -e "${BLUE}[INFO]${NC}  $*"; }
