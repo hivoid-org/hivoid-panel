@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 ###############################################################################
-#  HiVoid Panel — Pro Global Installer (GitHub Release Mode)
-#  Usage: curl -fsSL https://raw.githubusercontent.com/hivoid-org/hivoid-panel/main/install.sh | sudo bash
+#  HiVoid Panel — Pro Global Installer (Fixed Deployment Version)
 ###############################################################################
 
 set -euo pipefail
@@ -32,44 +31,56 @@ success() { echo -e "${GREEN}[  OK]${NC}  $*"; }
 warn()    { echo -e "${YELLOW}[WARN]${NC}  $*"; }
 error()   { echo -e "${RED}[FAIL]${NC}  $*"; exit 1; }
 
+# ─── Dependency Manager ──────────────────────────────────────────────────────
+install_deps() {
+    info "Checking system dependencies..."
+    
+    DEPS=(curl jq unzip openssl python3 python3-venv python3-pip)
+    MISSING_DEPS=()
+
+    for dep in "${DEPS[@]}"; do
+        if ! command -v "$dep" &>/dev/null && ! dpkg -s "$dep" &>/dev/null; then
+            MISSING_DEPS+=("$dep")
+        fi
+    done
+
+    if [ ${#MISSING_DEPS[@]} -ne 0 ]; then
+        info "Installing missing dependencies: ${MISSING_DEPS[*]}..."
+        apt-get update -qq
+        apt-get install -y -qq "${MISSING_DEPS[@]}" || error "Failed to install dependencies."
+        success "Dependencies installed."
+    else
+        success "All dependencies are already present."
+    fi
+}
+
 # ─── GitHub Downloader ───────────────────────────────────────────────────────
 download_release() {
     info "Fetching latest HiVoid Panel release from GitHub..."
     
-    # Check for jq (critical for parsing)
-    if ! command -v jq &>/dev/null; then
-        apt-get install -y -qq jq || error "Could not install 'jq'. It is required to parse GitHub API."
-    fi
-
-    # Find Latest ZIP Asset
+    # API Request to fetch the latest ZIP asset
     RELEASE_DATA=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest")
     ZIP_URL=$(echo "$RELEASE_DATA" | jq -r '.assets[] | select(.name | endswith(".zip")) | .browser_download_url' | head -n 1)
     TAG=$(echo "$RELEASE_DATA" | jq -r '.tag_name')
 
     if [[ -z "$ZIP_URL" || "$ZIP_URL" == "null" ]]; then
-        error "No .zip asset found in the latest GitHub release. Ensure you have published a zip in ${REPO}."
+        error "No .zip asset found in the latest release at ${REPO}."
     fi
 
     info "Downloading HiVoid Panel ${TAG}..."
     TEMP_DIR=$(mktemp -d)
     DOWNLOAD_PATH="${TEMP_DIR}/release.zip"
-    
     curl -fsSL -o "$DOWNLOAD_PATH" "$ZIP_URL"
     
     info "Extracting assets..."
-    if ! command -v unzip &>/dev/null; then
-        apt-get install -y -qq unzip
-    fi
-    
     unzip -qo "$DOWNLOAD_PATH" -d "$TEMP_DIR"
     
-    # Set the working source directory (the extracted content)
-    # The ZIP structure from package.sh puts files in the root or in backend/frontend subdirs
+    # Handle ZIP structures (both flat and nested)
     SRC_DIR="$TEMP_DIR"
     [[ -d "${TEMP_DIR}/hivoid-panel" ]] && SRC_DIR="${TEMP_DIR}/hivoid-panel"
     
     export SRC_DIR
-    success "Release ${TAG} downloaded and extracted."
+    success "Assets extracted to temporary workspace."
 }
 
 # ─── User Input ──────────────────────────────────────────────────────────────
@@ -78,13 +89,12 @@ get_user_input() {
     echo -e "${BOLD}HiVoid Configuration${NC}"
     echo "─────────────────────────────────────────────"
     
-    # Server Address
+    # Use /dev/tty to ensure input works when piped from curl
     while true; do
         read -rp "$(echo -e "${CYAN}▸${NC} Server Address [IP/Domain]: ")" SERVER_ADDRESS < /dev/tty
-        [[ -n "$SERVER_ADDRESS" ]] && break || warn "Address is required."
+        [[ -n "$SERVER_ADDRESS" ]] && break || warn "Input is required."
     done
 
-    # Panel Port
     while true; do
         read -rp "$(echo -e "${CYAN}▸${NC} Panel Port [default: 8443]: ")" PANEL_PORT < /dev/tty
         PANEL_PORT=${PANEL_PORT:-8443}
@@ -96,15 +106,15 @@ get_user_input() {
     done
 }
 
-# ─── Setup Logic ──────────────────────────────────────────────────────────────
-setup_directories() {
-    mkdir -p "$PANEL_DIR" "$DATA_DIR" "$CERT_DIR" "$BACKEND_DIR" "$FRONTEND_DIR"
-}
+# ─── Deployment Logic ─────────────────────────────────────────────────────────
+deploy_files() {
+    info "Creating directories..."
+    mkdir -p "$PANEL_DIR" "$DATA_DIR" "$CERT_DIR" "$BACKEND_DIR" "$FRONTEND_DIR/dist"
 
-copy_source_files() {
-    info "Deploying files from extraction..."
+    info "Deploying Backend..."
     cp -rv "${SRC_DIR}/backend/"* "$BACKEND_DIR/"
-    mkdir -p "${FRONTEND_DIR}/dist"
+
+    info "Deploying Frontend assets (Fixed mapping)..."
     cp -rv "${SRC_DIR}/frontend/"* "${FRONTEND_DIR}/dist/"
 }
 
@@ -120,20 +130,19 @@ KEY_FILE=${CERT_DIR}/key.pem
 HIVOID_BINARY_PATH=/usr/local/bin/hivoid-server
 HIVOID_CONFIG_PATH=${DATA_DIR}/server.json
 HIVOID_PID_PATH=/tmp/hivoid-server.pid
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD=admin
 EOF
     chmod 600 "$ENV_FILE"
 }
 
 setup_backend() {
-    info "Setting up Python environment..."
+    info "Configuring Python VENV..."
     python3 -m venv "$VENV_DIR"
     "${VENV_DIR}/bin/pip" install --upgrade pip -q
     "${VENV_DIR}/bin/pip" install -r "${BACKEND_DIR}/requirements.txt" -q
 }
 
 setup_systemd() {
+    info "Configuring Systemd..."
     cat > "/etc/systemd/system/${SERVICE_BACKEND}.service" <<EOF
 [Unit]
 Description=HiVoid Panel Backend
@@ -155,7 +164,7 @@ EOF
 }
 
 setup_cli() {
-    info "Installing 'hivoid' command..."
+    info "Installing global 'hivoid' command..."
     cat > /usr/local/bin/hivoid <<EOF
 #!/bin/bash
 cd ${BACKEND_DIR}
@@ -166,33 +175,23 @@ EOF
 
 # ─── Main ────────────────────────────────────────────────────────────────────
 main() {
-    [[ $EUID -ne 0 ]] && error "Run as root."
+    [[ $EUID -ne 0 ]] && error "Permission denied. Must run as root."
     
-    # 1. Download
-    download_release
+    install_deps      # Stage 0: Prep
+    download_release  # Stage 1: Fetch
+    get_user_input    # Stage 2: Config
+    deploy_files      # Stage 3: Extract
     
-    # 2. Config
-    get_user_input
-    
-    # 3. Base Setup
-    setup_directories
-    copy_source_files
-    
-    # 4. Certificates (Self-signed)
+    # Generate self-signed cert on the fly
     openssl req -x509 -newkey rsa:2048 -keyout "${CERT_DIR}/key.pem" -out "${CERT_DIR}/cert.pem" -days 3650 -nodes -subj "/CN=${SERVER_ADDRESS}" 2>/dev/null
     
-    # 5. Core Deployment
-    setup_environment
-    setup_backend
-    setup_systemd
-    setup_cli
+    setup_environment # Stage 4: Settings
+    setup_backend     # Stage 5: Python
+    setup_systemd     # Stage 6: Service
+    setup_cli         # Stage 7: CLI
     
-    # 6. Cleanup
     rm -rf "$TEMP_DIR"
-
-    success "Installation complete!"
-    echo -e "\nAccess here: https://${SERVER_ADDRESS}:${PANEL_PORT}"
-    echo -e "Use 'hivoid' command in terminal for management.\n"
+    success "Deployment complete. Visit: https://${SERVER_ADDRESS}:${PANEL_PORT}"
 }
 
 main "$@"
