@@ -80,13 +80,13 @@ get_user_input() {
     
     # Server Address
     while true; do
-        read -rp "$(echo -e "${CYAN}▸${NC} Server Address [IP/Domain]: ")" SERVER_ADDRESS
+        read -rp "$(echo -e "${CYAN}▸${NC} Server Address [IP/Domain]: ")" SERVER_ADDRESS < /dev/tty
         [[ -n "$SERVER_ADDRESS" ]] && break || warn "Address is required."
     done
 
     # Panel Port
     while true; do
-        read -rp "$(echo -e "${CYAN}▸${NC} Panel Port [default: 8443]: ")" PANEL_PORT
+        read -rp "$(echo -e "${CYAN}▸${NC} Panel Port [default: 8443]: ")" PANEL_PORT < /dev/tty
         PANEL_PORT=${PANEL_PORT:-8443}
         if [[ "$PANEL_PORT" =~ ^[0-9]+$ ]] && (( PANEL_PORT >= 1 && PANEL_PORT <= 65535 )); then
             break

@@ -5,3 +5,4 @@ __pycache__/
 .github/
 dist/
 github.py
+releases.md
