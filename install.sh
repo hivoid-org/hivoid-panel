@@ -25,7 +25,7 @@ ENV_FILE="${BACKEND_DIR}/.env"
 DB_PATH="${DATA_DIR}/hivoid_panel.db"
 SERVICE_BACKEND="hivoid-panel-backend"
 PANEL_REPO="hivoid-org/hivoid-panel"
-CORE_REPO="hivoid-org/hivoid-core"
+CORE_REPO=" "
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────
 info()    { echo -e "${BLUE}[INFO]${NC}  $*"; }
@@ -62,7 +62,7 @@ download_core() {
     esac
 
     RELEASE_DATA=$(curl -fsSL "https://api.github.com/repos/${CORE_REPO}/releases/latest")
-    CORE_ZIP_URL=$(echo "$RELEASE_DATA" | jq -r ".assets[] | select(.name | contains(\"linux-$ARCH\")) | .browser_download_url" | head -n 1)
+    CORE_ZIP_URL=$(echo "$RELEASE_DATA" | jq -r ".assets[] | select(.name | contains(\"linux-$ARCH\") and contains(\"Server\")) | .browser_download_url" | head -n 1)
     
     [[ -z "$CORE_ZIP_URL" || "$CORE_ZIP_URL" == "null" ]] && error "No core binary found for linux-$ARCH."
 
