@@ -20,15 +20,16 @@ def show_interactive_menu():
         print("  \033[1;33m2)\033[0m Stop Core Service")
         print("  \033[1;33m3)\033[0m Restart Core Service")
         print("  \033[1;33m4)\033[0m Check Operational Status")
-        print("  \033[1;33m5)\033[0m Update Core (GitHub Releases)")
-        print("  \033[1;33m6)\033[0m Reset Administrator Password")
-        print("  \033[1;33m7)\033[0m Change Web Panel Port")
-        print("  \033[1;31m8)\033[0m Delete Service (Dangerous)")
+        print("  \033[1;33m5)\033[0m Update Core (Binary)")
+        print("  \033[1;33m6)\033[0m Update Web Panel (UI & Backend)")
+        print("  \033[1;33m7)\033[0m Reset Administrator Password")
+        print("  \033[1;33m8)\033[0m Change Web Panel Port")
+        print("  \033[1;31m9)\033[0m Delete Service (Dangerous)")
         print("  " + "-"*46)
         print("  \033[1;37m0)\033[0m Exit")
         print("\033[1m" + "="*50 + "\033[0m")
 
-        choice = input("\033[1;32mSelect an option [0-8]: \033[0m")
+        choice = input("\033[1;32mSelect an option [0-9]: \033[0m")
 
         if choice == "0":
             print("\nExiting HiVoid Manager. Goodbye!")
@@ -50,22 +51,26 @@ def show_interactive_menu():
             print(f"\nStatus: {res['status'].upper()} (PID: {res['pid']})")
             input("\nPress ENTER to continue...")
         elif choice == "5":
-            print("\nUpdating core...")
+            print("\nUpdating core binary...")
             manager.update_core()
             input("\nPress ENTER to continue...")
         elif choice == "6":
+            print("\nUpdating web panel assets...")
+            manager.update_panel()
+            input("\nPress ENTER to continue...")
+        elif choice == "7":
             new_pass = input("\nEnter new secure password: ")
             if new_pass:
                 manager.reset_admin_password(new_pass)
             input("\nPress ENTER to continue...")
-        elif choice == "7":
+        elif choice == "8":
             new_port = input("\nEnter new Panel Port (1-65535): ")
             if new_port.isdigit():
                 manager.change_panel_port(int(new_port))
             else:
                 print("Invalid port number.")
             input("\nPress ENTER to continue...")
-        elif choice == "8":
+        elif choice == "9":
             confirm = input("\nARE YOU REALY SURE? (y/N): ")
             if confirm.lower() == 'y':
                 manager.delete_service()
@@ -91,7 +96,11 @@ def main():
     subparsers.add_parser("stop", help="Stop service")
     subparsers.add_parser("restart", help="Restart service")
     subparsers.add_parser("status", help="Check status")
-    subparsers.add_parser("update", help="Update core")
+    update_parser = subparsers.add_parser("update", help="Update HiVoid components")
+    update_group = update_parser.add_mutually_exclusive_group()
+    update_group.add_argument("--core", action="store_true", help="Only update the core binary")
+    update_group.add_argument("--panel", action="store_true", help="Only update the web panel")
+    update_group.add_argument("--all", action="store_true", help="Update both core and panel (default)")
     
     reset_pass_parser = subparsers.add_parser("reset-pass", help="Reset password")
     reset_pass_parser.add_argument("password", help="The new password")
@@ -112,7 +121,14 @@ def main():
     elif args.command == "status":
         print(manager.get_status())
     elif args.command == "update":
-        manager.update_core()
+        if args.panel:
+            manager.update_panel()
+        elif args.core:
+            manager.update_core()
+        else:
+            # Default or --all
+            manager.update_core()
+            manager.update_panel()
     elif args.command == "reset-pass":
         manager.reset_admin_password(args.password)
     elif args.command == "change-port":

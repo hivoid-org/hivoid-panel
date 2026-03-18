@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from typing import Dict, Optional
 from .process_manager import ProcessManager
-from .updater import CoreUpdater
+from .updater import CoreUpdater, PanelUpdater
 from .config_manager import ConfigManager
 from .utils import setup_logger, ensure_dir
 
@@ -28,7 +28,8 @@ class HiVoidManager:
 
         # Initialize sub-managers
         self.proc = ProcessManager(self.binary_path, self.config_path, self.pid_path)
-        self.updater = CoreUpdater(self.binary_path, self.backup_dir)
+        self.core_updater = CoreUpdater(self.binary_path, self.backup_dir)
+        self.panel_updater = PanelUpdater(Path("/opt/hivoid-panel"))
         self.config_mgr = ConfigManager(self.config_path, self.db_path)
 
     def start_service(self) -> bool:
@@ -101,9 +102,35 @@ class HiVoidManager:
         return os.system("systemctl restart hivoid-panel-backend") == 0
 
     def delete_service(self) -> bool:
-        """Remove binary and config. This is destructive."""
-        self.stop_service()
-        return self.config_mgr.delete_service(self.binary_path)
+        """Fully remove HiVoid Core, Panel, Services, and CLI. This is a total purge."""
+        logger.warning("Initiating full system purge...")
+        
+        # 1. Stop and disable services
+        services = ["hivoid-panel-backend", "hivoid-server"]
+        for svc in services:
+            logger.info(f"Removing systemd service: {svc}")
+            os.system(f"systemctl stop {svc} > /dev/null 2>&1")
+            os.system(f"systemctl disable {svc} > /dev/null 2>&1")
+            svc_file = Path(f"/etc/systemd/system/{svc}.service")
+            if svc_file.exists():
+                svc_file.unlink()
+        
+        os.system("systemctl daemon-reload")
+
+        # 2. Remove Global Binaries / CLI
+        logger.info("Removing global binaries and CLI symlinks...")
+        binaries = [self.binary_path, Path("/usr/local/bin/hivoid")]
+        for b in binaries:
+            if b.exists():
+                b.unlink()
+
+        # 3. Remove Project Directory
+        if Path("/opt/hivoid-panel").exists():
+            logger.info("Cleaning up /opt/hivoid-panel directory...")
+            shutil.rmtree("/opt/hivoid-panel", ignore_errors=True)
+
+        logger.info("HiVoid Panel and Core have been completely removed from this system.")
+        return True
 
     def update_core(self) -> bool:
         """
@@ -111,13 +138,28 @@ class HiVoidManager:
         Restarts service automatically after success.
         """
         # 1. Update the binary
-        success = self.updater.update()
+        success = self.core_updater.update()
         
         # 2. If update was successful, restart to use new version
         if success:
             logger.info("Core updated, restarting service...")
             return self.restart_service()
         
+        return False
+
+    def update_panel(self) -> bool:
+        """
+        Check GitHub, download panel ZIP and apply to /opt/hivoid-panel/.
+        Restarts the panel service automatically.
+        """
+        # 1. Update panel source code
+        success = self.panel_updater.update()
+        
+        # 2. Restart backend to apply new code
+        if success:
+            logger.info("Panel code updated, restarting panel service...")
+            return self.restart_panel()
+            
         return False
 
 # Usage Example:

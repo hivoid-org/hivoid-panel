@@ -72,9 +72,28 @@ def sync_server_config(db: Session) -> bool:
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database query failed: {e}")
 
+    # Load usage mapping from core's usage file
+    usage_map = {}
+    usage_path = config_path.with_suffix(".usage.json")
+    if usage_path.exists():
+        try:
+            usage_data = json.loads(usage_path.read_text())
+            for u_usage in usage_data.get("users", []):
+                usage_map[u_usage["uuid"]] = {
+                    "bytes_in": u_usage.get("bytes_in", 0),
+                    "bytes_out": u_usage.get("bytes_out", 0)
+                }
+        except Exception:
+            pass
+
     # Transform users to the new structured format
     user_list = []
     for u in enabled_users:
+        # Use usage from file if exists, otherwise fallback to DB
+        live_usage = usage_map.get(u.uuid, {})
+        u_bytes_in = live_usage.get("bytes_in", u.bytes_in)
+        u_bytes_out = live_usage.get("bytes_out", u.bytes_out)
+
         user_list.append({
             "uuid": u.uuid,
             "email": u.email or "",
@@ -82,8 +101,8 @@ def sync_server_config(db: Session) -> bool:
             "max_connections": u.max_connections,
             "bandwidth_limit": u.bandwidth_limit,
             "expire_at": u.expire_at or "",
-            "bytes_in": u.bytes_in,
-            "bytes_out": u.bytes_out,
+            "bytes_in": u_bytes_in,
+            "bytes_out": u_bytes_out,
             "mode": u.mode or "performance",
             "obfs": u.obfs or "none"
         })
