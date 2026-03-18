@@ -105,7 +105,7 @@ copy_source_files() {
     info "Deploying files from extraction..."
     cp -rv "${SRC_DIR}/backend/"* "$BACKEND_DIR/"
     mkdir -p "${FRONTEND_DIR}/dist"
-    cp -rv "${SRC_DIR}/frontend/dist/"* "${FRONTEND_DIR}/dist/"
+    cp -rv "${SRC_DIR}/frontend/"* "${FRONTEND_DIR}/dist/"
 }
 
 setup_environment() {
