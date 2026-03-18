@@ -6,7 +6,7 @@ import time
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Optional, Tuple
-from .utils import get_os_arch, setup_logger, calculate_sha256
+from .utils import get_os_arch, setup_logger
 
 logger = setup_logger("updater")
 

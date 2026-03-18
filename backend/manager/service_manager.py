@@ -108,28 +108,42 @@ class HiVoidManager:
         # 1. Stop and disable services
         services = ["hivoid-panel-backend", "hivoid-server"]
         for svc in services:
-            logger.info(f"Removing systemd service: {svc}")
+            logger.info(f"Terminating and removing service: {svc}")
             os.system(f"systemctl stop {svc} > /dev/null 2>&1")
             os.system(f"systemctl disable {svc} > /dev/null 2>&1")
+            # Kill any orphaned processes
+            os.system(f"pkill -9 -f {svc} > /dev/null 2>&1")
+            
             svc_file = Path(f"/etc/systemd/system/{svc}.service")
             if svc_file.exists():
                 svc_file.unlink()
         
         os.system("systemctl daemon-reload")
 
-        # 2. Remove Global Binaries / CLI
-        logger.info("Removing global binaries and CLI symlinks...")
-        binaries = [self.binary_path, Path("/usr/local/bin/hivoid")]
+        # 2. Remove Global Binaries / CLI hooks
+        logger.info("Removing management CLI and core binaries...")
+        binaries = [
+            Path("/usr/local/bin/hivoid-server"),
+            Path("/usr/local/bin/hivoid")
+        ]
         for b in binaries:
             if b.exists():
-                b.unlink()
+                try:
+                    b.unlink()
+                except Exception as e:
+                    logger.error(f"Failed to delete {b}: {e}")
 
-        # 3. Remove Project Directory
-        if Path("/opt/hivoid-panel").exists():
-            logger.info("Cleaning up /opt/hivoid-panel directory...")
-            shutil.rmtree("/opt/hivoid-panel", ignore_errors=True)
+        # 3. Wipe the entire project directory
+        target_dir = Path("/opt/hivoid-panel")
+        if target_dir.exists():
+            logger.info(f"Wiping {target_dir} completely...")
+            try:
+                # Use shell rm -rf for the directory to handle permission issues more robustly in Linux
+                os.system(f"rm -rf {target_dir}")
+            except Exception as e:
+                logger.error(f"Failed to wipe /opt/hivoid-panel: {e}")
 
-        logger.info("HiVoid Panel and Core have been completely removed from this system.")
+        logger.info("HiVoid Ecosystem has been totally purged from this system.")
         return True
 
     def update_core(self) -> bool:

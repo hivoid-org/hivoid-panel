@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 ###############################################################################
-#  HiVoid Panel — Pro Global Installer (Fixed Deployment Version)
+#  HiVoid Panel — Pro Global Installer (Ultimate Stable Version)
 ###############################################################################
 
 set -euo pipefail
@@ -22,6 +22,7 @@ DATA_DIR="${PANEL_DIR}/data"
 CERT_DIR="${PANEL_DIR}/certs"
 VENV_DIR="${BACKEND_DIR}/venv"
 ENV_FILE="${BACKEND_DIR}/.env"
+DB_PATH="${DATA_DIR}/hivoid_panel.db"
 SERVICE_BACKEND="hivoid-panel-backend"
 PANEL_REPO="hivoid-org/hivoid-panel"
 CORE_REPO="hivoid-org/hivoid-core"
@@ -50,29 +51,9 @@ install_deps() {
     fi
 }
 
-# ─── GitHub Downloader (Panel) ───────────────────────────────────────────────
-download_panel() {
-    info "Fetching latest HiVoid Panel release..."
-    RELEASE_DATA=$(curl -fsSL "https://api.github.com/repos/${PANEL_REPO}/releases/latest")
-    ZIP_URL=$(echo "$RELEASE_DATA" | jq -r '.assets[] | select(.name | endswith(".zip")) | .browser_download_url' | head -n 1)
-    TAG=$(echo "$RELEASE_DATA" | jq -r '.tag_name')
-
-    info "Downloading HiVoid Panel ${TAG}..."
-    TEMP_DIR=$(mktemp -d)
-    curl -fsSL -o "${TEMP_DIR}/panel.zip" "$ZIP_URL"
-    unzip -qo "${TEMP_DIR}/panel.zip" -d "$TEMP_DIR"
-    
-    SRC_DIR="$TEMP_DIR"
-    [[ -d "${TEMP_DIR}/hivoid-panel" ]] && SRC_DIR="${TEMP_DIR}/hivoid-panel"
-    export SRC_DIR
-    success "Panel assets extracted."
-}
-
 # ─── GitHub Downloader (Core) ────────────────────────────────────────────────
 download_core() {
     info "Fetching latest HiVoid Core binary..."
-    
-    # Detect Architecture
     ARCH=$(uname -m)
     case "$ARCH" in
         x86_64)  ARCH="amd64" ;;
@@ -80,29 +61,39 @@ download_core() {
         *) error "Unsupported architecture: $ARCH" ;;
     esac
 
-    # Find Latest Linux Asset
     RELEASE_DATA=$(curl -fsSL "https://api.github.com/repos/${CORE_REPO}/releases/latest")
-    # Asset name pattern: hivoid-core-linux-amd64-vX.X.X.zip
     CORE_ZIP_URL=$(echo "$RELEASE_DATA" | jq -r ".assets[] | select(.name | contains(\"linux-$ARCH\")) | .browser_download_url" | head -n 1)
     
-    if [[ -z "$CORE_ZIP_URL" || "$CORE_ZIP_URL" == "null" ]]; then
-        error "No core binary found for linux-$ARCH in ${CORE_REPO}."
-    fi
+    [[ -z "$CORE_ZIP_URL" || "$CORE_ZIP_URL" == "null" ]] && error "No core binary found for linux-$ARCH."
 
-    info "Downloading Core binary (linux-$ARCH)..."
+    info "Downloading Core binary..."
     CORE_TEMP=$(mktemp -d)
     curl -fsSL -o "${CORE_TEMP}/core.zip" "$CORE_ZIP_URL"
     unzip -qo "${CORE_TEMP}/core.zip" -d "$CORE_TEMP"
     
-    # Move binary to /usr/local/bin (assume name 'hivoid-server' or similar in zip)
     BINARY_FILE=$(find "$CORE_TEMP" -type f -name "hivoid-server*" | head -n 1)
     [[ -z "$BINARY_FILE" ]] && BINARY_FILE=$(find "$CORE_TEMP" -type f -executable | head -n 1)
     
-    mv -v "$BINARY_FILE" "/usr/local/bin/hivoid-server"
+    mv -f "$BINARY_FILE" "/usr/local/bin/hivoid-server"
     chmod +x "/usr/local/bin/hivoid-server"
-    
     rm -rf "$CORE_TEMP"
-    success "Core binary installed to /usr/local/bin/hivoid-server"
+    success "Core binary installed."
+}
+
+# ─── GitHub Downloader (Panel) ───────────────────────────────────────────────
+download_panel() {
+    info "Fetching latest HiVoid Panel release..."
+    RELEASE_DATA=$(curl -fsSL "https://api.github.com/repos/${PANEL_REPO}/releases/latest")
+    ZIP_URL=$(echo "$RELEASE_DATA" | jq -r '.assets[] | select(.name | endswith(".zip")) | .browser_download_url' | head -n 1)
+
+    info "Downloading Panel..."
+    TEMP_DIR=$(mktemp -d)
+    curl -fsSL -o "${TEMP_DIR}/panel.zip" "$ZIP_URL"
+    unzip -qo "${TEMP_DIR}/panel.zip" -d "$TEMP_DIR"
+    
+    SRC_DIR="$TEMP_DIR"
+    [[ -d "${TEMP_DIR}/hivoid-panel" ]] && SRC_DIR="${TEMP_DIR}/hivoid-panel"
+    export SRC_DIR
 }
 
 # ─── User Input ──────────────────────────────────────────────────────────────
@@ -112,32 +103,25 @@ get_user_input() {
     echo "─────────────────────────────────────────────"
     while true; do
         read -rp "$(echo -e "${CYAN}▸${NC} Server Address [IP/Domain]: ")" SERVER_ADDRESS < /dev/tty
-        [[ -n "$SERVER_ADDRESS" ]] && break || warn "Input is required."
+        [[ -n "$SERVER_ADDRESS" ]] && break || warn "Input required."
     done
-    while true; do
-        read -rp "$(echo -e "${CYAN}▸${NC} Panel Port [default: 8443]: ")" PANEL_PORT < /dev/tty
-        PANEL_PORT=${PANEL_PORT:-8443}
-        if [[ "$PANEL_PORT" =~ ^[0-9]+$ ]] && (( PANEL_PORT >= 1 && PANEL_PORT <= 65535 )); then
-            break
-        else
-            warn "Invalid port."
-        fi
-    done
+    read -rp "$(echo -e "${CYAN}▸${NC} Panel Port [default: 8443]: ")" PANEL_PORT < /dev/tty
+    PANEL_PORT=${PANEL_PORT:-8443}
 }
 
 # ─── Deployment Logic ─────────────────────────────────────────────────────────
 deploy_files() {
     info "Preparing directories..."
     mkdir -p "$PANEL_DIR" "$DATA_DIR" "$CERT_DIR" "$BACKEND_DIR" "$FRONTEND_DIR/dist"
-    cp -rv "${SRC_DIR}/backend/"* "$BACKEND_DIR/"
-    cp -rv "${SRC_DIR}/frontend/"* "${FRONTEND_DIR}/dist/"
+    cp -rf "${SRC_DIR}/backend/"* "$BACKEND_DIR/"
+    cp -rf "${SRC_DIR}/frontend/"* "${FRONTEND_DIR}/dist/"
 }
 
 setup_environment() {
     SECRET_KEY=$(openssl rand -hex 32)
     cat > "$ENV_FILE" <<EOF
 SECRET_KEY=${SECRET_KEY}
-DATABASE_URL=sqlite:///${DATA_DIR}/hivoid_panel.db
+DATABASE_URL=sqlite:///${DB_PATH}
 SERVER_ADDRESS=${SERVER_ADDRESS}
 PANEL_PORT=${PANEL_PORT}
 CERT_FILE=${CERT_DIR}/cert.pem
@@ -152,16 +136,25 @@ EOF
 }
 
 setup_backend() {
-    info "Configuring Python VENV and database..."
+    info "Configuring Python VENV..."
     python3 -m venv "$VENV_DIR"
     "${VENV_DIR}/bin/pip" install --upgrade pip -q
-    "${VENV_DIR}/bin/pip" install -r "${BACKEND_DIR}/requirements.txt"
-    export DATABASE_URL="sqlite:///${DATA_DIR}/hivoid_panel.db"
-    "${VENV_DIR}/bin/python3" "${BACKEND_DIR}/migrate.py" || warn "Migration failed."
+    
+    info "Installing Python packages (Ensuring requests and psutil)..."
+    # Forced installation of critical packages regardless of requirements.txt
+    "${VENV_DIR}/bin/pip" install requests psutil bcrypt fastapi uvicorn sqlalchemy aiosqlite python-jose[cryptography] passlib[bcrypt] python-multipart pydantic-settings slowapi -q
+    
+    if [ -f "${BACKEND_DIR}/requirements.txt" ]; then
+        "${VENV_DIR}/bin/pip" install -r "${BACKEND_DIR}/requirements.txt" -q
+    fi
+    
+    info "Initializing database..."
+    export DATABASE_URL="sqlite:///${DB_PATH}"
+    "${VENV_DIR}/bin/python3" "${BACKEND_DIR}/migrate.py"
 }
 
 setup_systemd() {
-    info "Configuring Systemd service..."
+    info "Configuring Systemd..."
     cat > "/etc/systemd/system/${SERVICE_BACKEND}.service" <<EOF
 [Unit]
 Description=HiVoid Panel Backend
@@ -181,10 +174,10 @@ EOF
 }
 
 setup_cli() {
-    info "Installing 'hivoid' management CLI..."
+    info "Installing 'hivoid' CLI..."
     cat > /usr/local/bin/hivoid <<EOF
 #!/bin/bash
-export DATABASE_URL="sqlite:///${DATA_DIR}/hivoid_panel.db"
+export DATABASE_URL="sqlite:///${DB_PATH}"
 cd ${BACKEND_DIR}
 ./venv/bin/python3 -m manager.cli "\$@"
 EOF
@@ -196,7 +189,7 @@ main() {
     [[ $EUID -ne 0 ]] && error "Must run as root."
     
     install_deps
-    download_core     # NEW: Install core binary first
+    download_core
     download_panel
     get_user_input
     deploy_files
@@ -212,10 +205,9 @@ main() {
     echo -e "\n"
     success "HiVoid Ecosystem successfully deployed!"
     echo "─────────────────────────────────────────────"
-    echo -e "${BOLD}Panel URL:${NC}  https://${SERVER_ADDRESS}:${PANEL_PORT}"
-    echo -e "${BOLD}Default User:${NC} admin / admin"
+    echo -e "Panel URL:    https://${SERVER_ADDRESS}:${PANEL_PORT}"
+    echo -e "Credentials:  admin / admin"
     echo "─────────────────────────────────────────────"
-    echo -e "Binary installed at: /usr/local/bin/hivoid-server"
     echo -e "Use the '${CYAN}hivoid${NC}' command for management.\n"
 }
 
