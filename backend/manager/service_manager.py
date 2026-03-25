@@ -47,8 +47,10 @@ class HiVoidManager:
             './venv/bin/python3 -m manager.cli "$@"\n'
         )
         try:
-            self.cli_path.write_text(wrapper)
-            os.chmod(self.cli_path, 0o755)
+            tmp_path = self.cli_path.with_suffix(".tmp")
+            tmp_path.write_text(wrapper)
+            os.chmod(tmp_path, 0o755)
+            tmp_path.replace(self.cli_path)
             logger.info(f"CLI wrapper refreshed at {self.cli_path}")
             return True
         except Exception as e:
