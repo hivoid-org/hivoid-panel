@@ -129,6 +129,7 @@ class PanelUpdater:
         self.panel_root = panel_root
         self.backend_dir = panel_root / "backend"
         self.frontend_dir = panel_root / "frontend"
+        self.frontend_dist_dir = self.frontend_dir / "dist"
 
     def update(self) -> bool:
         """Fetch and apply the latest panel release over the current installation."""
@@ -193,8 +194,13 @@ class PanelUpdater:
                 # Frontend Update
                 if (src / "frontend").is_dir():
                     logger.debug("Updating frontend assets...")
-                    # Usually we only care about 'dist' if it was pre-built, or the whole folder
-                    self._sync_folder(src / "frontend", self.frontend_dir, exclude=["node_modules"])
+                    # Deployment ZIP stores compiled frontend files under frontend/.
+                    # Runtime serves from /opt/hivoid-panel/frontend/dist.
+                    frontend_src = src / "frontend"
+                    if (frontend_src / "dist").is_dir():
+                        self._sync_folder(frontend_src / "dist", self.frontend_dist_dir, exclude=["node_modules"])
+                    else:
+                        self._sync_folder(frontend_src, self.frontend_dist_dir, exclude=["node_modules"])
                 
                 logger.info(f"HiVoid Panel updated to {tag} successfully.")
                 return True
