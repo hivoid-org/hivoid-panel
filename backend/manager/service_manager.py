@@ -15,6 +15,9 @@ class HiVoidManager:
     DEFAULT_DB = Path("/opt/hivoid-panel/backend/data/hivoid_panel.db")
     DEFAULT_PID = Path("/tmp/hivoid-server.pid")
     DEFAULT_BACKUP = Path("/opt/hivoid-panel/backups")
+    DEFAULT_PANEL_ROOT = Path("/opt/hivoid-panel")
+    DEFAULT_BACKEND_DIR = Path("/opt/hivoid-panel/backend")
+    DEFAULT_CLI_PATH = Path("/usr/local/bin/hivoid")
 
     def __init__(self, binary_path: Optional[Path] = None):
         self.binary_path = binary_path or self.DEFAULT_BINARY
@@ -22,6 +25,9 @@ class HiVoidManager:
         self.db_path = self.DEFAULT_DB
         self.pid_path = self.DEFAULT_PID
         self.backup_dir = self.DEFAULT_BACKUP
+        self.panel_root = self.DEFAULT_PANEL_ROOT
+        self.backend_dir = self.DEFAULT_BACKEND_DIR
+        self.cli_path = self.DEFAULT_CLI_PATH
         
         # Ensure backup dir exists
         ensure_dir(self.backup_dir)
@@ -29,8 +35,25 @@ class HiVoidManager:
         # Initialize sub-managers
         self.proc = ProcessManager(self.binary_path, self.config_path, self.pid_path)
         self.core_updater = CoreUpdater(self.binary_path, self.backup_dir)
-        self.panel_updater = PanelUpdater(Path("/opt/hivoid-panel"))
+        self.panel_updater = PanelUpdater(self.panel_root)
         self.config_mgr = ConfigManager(self.config_path, self.db_path)
+
+    def refresh_cli_wrapper(self) -> bool:
+        """Recreate /usr/local/bin/hivoid wrapper so CLI tracks latest backend code."""
+        wrapper = (
+            "#!/bin/bash\n"
+            f'export DATABASE_URL="sqlite:///{self.db_path}"\n'
+            f"cd {self.backend_dir}\n"
+            './venv/bin/python3 -m manager.cli "$@"\n'
+        )
+        try:
+            self.cli_path.write_text(wrapper)
+            os.chmod(self.cli_path, 0o755)
+            logger.info(f"CLI wrapper refreshed at {self.cli_path}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to refresh CLI wrapper: {e}")
+            return False
 
     def start_service(self) -> bool:
         """Start core if not running."""
@@ -169,8 +192,10 @@ class HiVoidManager:
         # 1. Update panel source code
         success = self.panel_updater.update()
         
-        # 2. Restart backend to apply new code
+        # 2. Refresh CLI wrapper so `hivoid` always points to updated backend manager code
         if success:
+            if not self.refresh_cli_wrapper():
+                return False
             logger.info("Panel code updated, restarting panel service...")
             return self.restart_panel()
             
