@@ -38,7 +38,7 @@ class UserCreate(BaseModel):
     bandwidth_limit: int = Field(default=0, ge=0)  # KB/s
     expire_at: Optional[str] = None
     mode: str = "performance"  # performance | high_performance | stealth | balanced | adaptive
-    obfs: str = "none"         # none | random | http | tls
+    obfs: str = "none"         # none | random | http | tls | masque | webtransport | ghost
     enabled: bool = True
     note: Optional[str] = None
 
@@ -51,7 +51,7 @@ class UserUpdate(BaseModel):
     bandwidth_limit: Optional[int] = Field(default=None, ge=0)
     expire_at: Optional[str] = None
     mode: Optional[str] = None
-    obfs: Optional[str] = None
+    obfs: Optional[str] = None  # none | random | http | tls | masque | webtransport | ghost
     enabled: Optional[bool] = None
     note: Optional[str] = None
 
@@ -68,7 +68,7 @@ class UserResponse(BaseModel):
     bytes_in: int
     bytes_out: int
     mode: str
-    obfs: str
+    obfs: str  # none | random | http | tls | masque | webtransport | ghost
     enabled: bool
     note: Optional[str] = None
     created_at: datetime

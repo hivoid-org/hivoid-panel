@@ -82,6 +82,7 @@ export const users = {
   toggle: (id) => request(`/users/${id}/toggle`, { method: 'POST' }),
   generateUuid: () => request('/users/generate-uuid'),
   getConfig: (id) => request(`/users/${id}/config`),
+  regenerateUuid: (id) => request(`/users/${id}/regenerate-uuid`, { method: 'POST' }),
 };
 
 // ── System ────────────────────────────────────────────────────

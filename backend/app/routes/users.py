@@ -226,8 +226,7 @@ def get_user_config_data(
     # Construct hivoid:// Protocol Link
     import urllib.parse
     safe_name = urllib.parse.quote(user.name or user.email or "HiVoid")
-    protocol_link = f"hivoid://{user.uuid}@{client_json['server']}:{client_json['port']}?mode={client_json['mode']}&obfs={client_json['obfs']}#{safe_name}"
-
+    protocol_link = f"hivoid://{user.uuid}@{client_json['server']}:{client_json['port']}?mode={client_json['mode']}&obfs={client_json['obfs']}&insecure=true#{safe_name}"
     return {
         "json": client_json,
         "url": sub_url,
@@ -260,3 +259,21 @@ def public_config_subscription(
         "name": user.name or user.email or "HiVoid Client"
     }
     return client_json
+
+@router.post("/{user_id}/regenerate-uuid", response_model=UserResponse)
+def regenerate_user_uuid(
+    user_id: int,
+    admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """Regenerate UUID for a user, preserving all other fields."""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    import uuid as uuidlib
+    old_uuid = user.uuid
+    user.uuid = str(uuidlib.uuid4())
+    db.commit()
+    db.refresh(user)
+    sync_server_config(db)
+    return user

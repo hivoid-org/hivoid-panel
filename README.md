@@ -1,6 +1,14 @@
 # HiVoid Panel 🚀
 
+<p align="center">
+  <img src="logo/hi-logo-white-transparent.png" alt="Hi Void Logo" width="200" />
+</p>
+
 Professional management interface for HiVoid encrypted core.
+
+
+- **Version:** `v1.2.0`
+- **License:** `MPL-2.0`
 
 ## 🚀 One-Line Installation
 

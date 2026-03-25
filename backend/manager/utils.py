@@ -9,7 +9,22 @@ def setup_logger(name: str) -> logging.Logger:
     if not logger.handlers:
         logger.setLevel(logging.INFO)
         handler = logging.StreamHandler(sys.stdout)
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        # Colored and neat log format with date and time
+        class ColoredFormatter(logging.Formatter):
+            COLORS = {
+                'DEBUG': '\033[36m',    # Cyan
+                'INFO': '\033[32m',     # Green
+                'WARNING': '\033[33m',  # Yellow
+                'ERROR': '\033[31m',    # Red
+                'CRITICAL': '\033[41m', # Red background
+            }
+            RESET = '\033[0m'
+            def format(self, record):
+                levelname = record.levelname
+                color = self.COLORS.get(levelname, '')
+                msg = f"{color}[{levelname}] {record.name}: {record.getMessage()}{self.RESET}"
+                return msg
+        formatter = ColoredFormatter()
         handler.setFormatter(formatter)
         logger.addHandler(handler)
     return logger

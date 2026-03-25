@@ -18,6 +18,9 @@ const OBFS = [
   { value: 'random', label: 'Random' },
   { value: 'http', label: 'HTTP' },
   { value: 'tls', label: 'TLS' },
+  { value: 'masque', label: 'Masque' },
+  { value: 'webtransport', label: 'WebTransport' },
+  { value: 'ghost', label: 'Ghost' },
 ];
 
 export default function UsersPage() {
@@ -323,12 +326,19 @@ function ConfigModal({ user, onClose, notify }) {
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(null);
 
-  useEffect(() => {
+
+  const reloadConfig = () => {
+    setLoading(true);
     usersApi.getConfig(user.id)
       .then(setData)
       .catch(e => notify(e.message, false))
       .finally(() => setLoading(false));
-  }, [user.id, notify]);
+  };
+
+  useEffect(() => {
+    reloadConfig();
+    // eslint-disable-next-line
+  }, [user.id]);
 
   const copy = (text, type) => {
     navigator.clipboard.writeText(text);
@@ -346,6 +356,25 @@ function ConfigModal({ user, onClose, notify }) {
             <p className="text-xs text-neutral-500 mt-0.5">{user.name}</p>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400"><X className="w-4 h-4" /></button>
+        </div>
+
+        {/* Regenerate UUID Button */}
+        <div className="flex justify-end mb-4">
+          <button
+            className="btn-secondary text-xs flex items-center gap-1"
+            onClick={async () => {
+              if (!window.confirm('Are you sure you want to regenerate the UUID?')) return;
+              try {
+                await usersApi.regenerateUuid(user.id);
+                notify('UUID regenerated');
+                reloadConfig();
+              } catch (e) {
+                notify(e.message, false);
+              }
+            }}
+          >
+            <Fingerprint className="w-4 h-4" /> Regenerate UUID
+          </button>
         </div>
 
         {loading ? (
