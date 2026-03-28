@@ -33,9 +33,11 @@ export default function Layout() {
         {/* Brand */}
         <div className="h-16 flex items-center justify-between px-5 border-b border-neutral-100 dark:border-neutral-800">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-neutral-900 dark:bg-white flex items-center justify-center">
-              <span className="text-white dark:text-neutral-900 text-xs font-black">Hi</span>
-            </div>
+            <img 
+              src={theme === 'dark' ? '/logo-light.png' : '/logo-dark.png'} 
+              alt="Logo" 
+              className="w-8 h-8 object-contain"
+            />
             <span className="text-sm font-bold tracking-tight">HiVoid</span>
           </div>
           <button onClick={() => setOpen(false)} className="lg:hidden p-1 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800">

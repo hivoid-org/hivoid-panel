@@ -31,6 +31,12 @@ def _human_uptime(seconds: float) -> str:
     return " ".join(parts)
 
 
+import platform
+try:
+    import distro # type: ignore
+except ImportError:
+    distro = None
+
 @router.get("/stats", response_model=SystemStatsResponse)
 def system_stats(admin: Admin = Depends(get_current_admin)):
     """Return live system stats."""
@@ -38,6 +44,19 @@ def system_stats(admin: Admin = Depends(get_current_admin)):
     cpu_count = psutil.cpu_count(logical=True)
     mem = psutil.virtual_memory()
     uptime = time.time() - _BOOT_TIME
+
+    os_info = f"{platform.system()} {platform.release()}"
+    if distro:
+        os_info = f"{distro.name()} {distro.version()}"
+    elif platform.system() == "Linux":
+        # Raw fallback for linux if distro lib is missing
+        try:
+            with open("/etc/os-release") as f:
+                for line in f:
+                    if line.startswith("PRETTY_NAME="):
+                        os_info = line.split("=")[1].strip().strip('"')
+                        break
+        except: pass
 
     return SystemStatsResponse(
         cpu_percent=cpu,
@@ -47,6 +66,7 @@ def system_stats(admin: Admin = Depends(get_current_admin)):
         ram_percent=mem.percent,
         uptime_seconds=round(uptime, 1),
         uptime_human=_human_uptime(uptime),
+        os_name=os_info
     )
 
 

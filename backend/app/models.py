@@ -19,6 +19,8 @@ class Admin(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     username = Column(String(100), unique=True, nullable=False, index=True)
     hashed_password = Column(String(255), nullable=False)
+    totp_secret = Column(String(50), nullable=True)
+    totp_enabled = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -33,6 +35,8 @@ class User(Base):
     name = Column(String(100), nullable=False)
     email = Column(String(255), nullable=True)
     max_connections = Column(Integer, default=0)  # 0 = unlimited
+    max_ips = Column(Integer, default=0)          # 0 = unlimited
+    bind_ip = Column(String(50), nullable=True)   # string
     data_limit_gb = Column(Integer, default=0)    # 0 = unlimited
     bandwidth_limit = Column(Integer, default=0)  # 0 = unlimited (KB/s)
     expire_at = Column(String, nullable=True)     # ISO 8601 String
@@ -42,6 +46,16 @@ class User(Base):
     obfs = Column(String, default="none")
     enabled = Column(Boolean, default=True)
     note = Column(Text, nullable=True)
+    
+    # Advanced Client Config
+    pool_size = Column(Integer, default=4)
+    bypass_domains = Column(Text, default="localhost")
+    bypass_ips = Column(Text, default="127.0.0.1/32,192.168.1.0/24")
+    geoip_path = Column(String(255), default="./geoip.dat")
+    geosite_path = Column(String(255), default="./geosite.dat")
+    direct_route = Column(Text, default="category-ads")
+    cert_pin = Column(String(64), default="")
+    
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

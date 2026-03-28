@@ -8,6 +8,7 @@ import os
 import signal
 import subprocess
 import time
+import hashlib
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -15,7 +16,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.database import get_db
-from app.models import Admin, User
+from app.models import Admin, User, PanelSettings
 from app.schemas import ProtocolStatusResponse, MessageResponse
 from app.auth import get_current_admin
 
@@ -99,7 +100,10 @@ def sync_server_config(db: Session) -> bool:
             "email": u.email or "",
             "enabled": u.enabled,
             "max_connections": u.max_connections,
+            "max_ips": u.max_ips or 0,
+            "bind_ip": u.bind_ip or "",
             "bandwidth_limit": u.bandwidth_limit,
+            "data_limit": u.data_limit_gb * 1073741824 if u.data_limit_gb else 0,
             "expire_at": u.expire_at or "",
             "bytes_in": u_bytes_in,
             "bytes_out": u_bytes_out,
@@ -115,16 +119,27 @@ def sync_server_config(db: Session) -> bool:
         except (json.JSONDecodeError, OSError):
             pass
 
+    # Get global panel settings for server config
+    try:
+        s = db.query(PanelSettings).first()
+        if s and s.hivoid_config:
+            panel_config = json.loads(s.hivoid_config)
+            if isinstance(panel_config, dict):
+                existing.update(panel_config)
+    except Exception:
+        pass
+
     # Safely extract existing values (handle both Flat and Nested legacy formats)
     old_server_block = existing.get("server", {}) if isinstance(existing.get("server"), dict) else {}
     old_security_block = existing.get("security", {}) if isinstance(existing.get("security"), dict) else {}
+    old_features_block = existing.get("features", {}) if isinstance(existing.get("features"), dict) else {}
 
-    listen = old_server_block.get("listen") or f":{existing.get('port', 4433)}"
-    mode = old_server_block.get("mode") or existing.get("mode") or "performance"
-    log_level = old_server_block.get("log_level") or "info"
+    listen = existing.get("listen") or old_server_block.get("listen") or f":{existing.get('port', 4433)}"
+    mode = existing.get("mode") or old_server_block.get("mode") or "performance"
+    log_level = existing.get("log_level") or old_server_block.get("log_level") or "info"
     
-    cert_file = old_security_block.get("cert_file") or existing.get("cert") or settings.CERT_FILE
-    key_file = old_security_block.get("key_file") or existing.get("key") or settings.KEY_FILE
+    cert_file = existing.get("cert_file") or old_security_block.get("cert_file") or settings.CERT_FILE
+    key_file = existing.get("key_file") or old_security_block.get("key_file") or settings.KEY_FILE
 
     # Core 1.1 structured format
     config = {
@@ -138,14 +153,16 @@ def sync_server_config(db: Session) -> bool:
             "key_file": key_file
         },
         "features": {
-            "hot_reload": True,
-            "connection_tracking": True,
-            "disconnect_expired": True
+            "hot_reload": bool(existing.get("hot_reload", old_features_block.get("hot_reload", True))),
+            "connection_tracking": bool(existing.get("connection_tracking", old_features_block.get("connection_tracking", True))),
+            "disconnect_expired": bool(existing.get("disconnect_expired", old_features_block.get("disconnect_expired", True)))
         },
         "users": user_list,
         "max_conns": int(existing.get("max_conns", 0)),
-        "allowed_hosts": existing.get("allowed_hosts", []),
-        "blocked_hosts": existing.get("blocked_hosts", [])
+        "allowed_hosts": [h.strip() for h in existing.get("allowed_hosts", []) if h.strip()] if isinstance(existing.get("allowed_hosts"), list) else [],
+        "blocked_hosts": [h.strip() for h in existing.get("blocked_hosts", []) if h.strip()] if isinstance(existing.get("blocked_hosts"), list) else [],
+        "anti_probe": bool(existing.get("anti_probe", True)),
+        "fallback_addr": existing.get("fallback_addr", "127.0.0.1:8080")
     }
 
     try:
@@ -206,10 +223,24 @@ def _stop_process(pid: int):
 
 
 @router.get("/status", response_model=ProtocolStatusResponse)
-def protocol_status(admin: Admin = Depends(get_current_admin)):
+def protocol_status(
+    admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)):
     """Get the current status of the HiVoid server process."""
     running, pid = _is_running()
     uptime_str = None
+    version_str = "unknown"
+
+    # Try to fetch binary version
+    try:
+        binary = Path(settings.HIVOID_BINARY_PATH)
+        if binary.exists():
+            res = subprocess.run([str(binary), "--version"], capture_output=True, text=True, timeout=2)
+            if res.returncode == 0:
+                # Expecting something like "HiVoid Server v1.1.0" or just "1.1.0"
+                version_str = res.stdout.strip().split("\n")[0]
+    except Exception:
+        pass
 
     if running and pid:
         try:
@@ -231,7 +262,53 @@ def protocol_status(admin: Admin = Depends(get_current_admin)):
         except Exception:
             uptime_str = "unknown"
 
-    return ProtocolStatusResponse(running=running, pid=pid, uptime=uptime_str)
+    # Check if Anti-Probe is enabled in config
+    anti_probe = True # Default
+    ps = db.query(PanelSettings).first()
+    if ps and ps.hivoid_config:
+        try:
+            cfg = json.loads(ps.hivoid_config)
+            anti_probe = cfg.get("anti_probe", True)
+        except:
+            pass
+
+    cert_pin = None
+    cert_pinning = False
+    try:
+        cert_path = Path(settings.CERT_FILE)
+        if cert_path.exists():
+            res = subprocess.run(
+                ["openssl", "x509", "-in", str(cert_path), "-outform", "DER"],
+                capture_output=True,
+                check=True
+            )
+            der_content = res.stdout
+            m = hashlib.sha256()
+            m.update(der_content)
+            cert_pin = m.hexdigest()
+            cert_pinning = True
+    except Exception as e:
+        logger.error(f"Cert Pin calculation failed: {e}")
+
+    # Check geodata
+    geodata_installed = False
+    try:
+        paths = [Path("geoip.dat"), Path("geosite.dat"), Path("data/geoip.dat"), Path("data/geosite.dat")]
+        geosite_ok = any(p.name == "geosite.dat" and p.exists() for p in paths)
+        geoip_ok = any(p.name == "geoip.dat" and p.exists() for p in paths)
+        geodata_installed = geosite_ok and geoip_ok
+    except: pass
+
+    return ProtocolStatusResponse(
+        running=running, 
+        pid=pid, 
+        uptime=uptime_str, 
+        version=version_str, 
+        cert_pin=cert_pin,
+        anti_probe=anti_probe, # Reflects setting
+        cert_pinning=cert_pinning,
+        geodata_installed=geodata_installed
+    )
 
 
 @router.post("/start", response_model=MessageResponse)
@@ -356,3 +433,58 @@ def sync_config(
     """
     config_path = sync_server_config(db)
     return MessageResponse(message=f"Configuration synced to {config_path}")
+
+
+@router.post("/generate-cert", response_model=MessageResponse)
+def generate_cert(
+    admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    Generate new TLS self-signed certificates for the proxy.
+    """
+    cert_path = Path(settings.CERT_FILE)
+    key_path = Path(settings.KEY_FILE)
+    cert_path.parent.mkdir(parents=True, exist_ok=True)
+    
+    import subprocess
+    cmd = [
+        "openssl", "req", "-new", "-newkey", "rsa:2048", "-days", "3650",
+        "-nodes", "-x509", "-subj", "/C=US/ST=State/L=City/O=HiVoid/CN=hivoid.proxy",
+        "-keyout", str(key_path), "-out", str(cert_path)
+    ]
+    try:
+        res = subprocess.run(cmd, capture_output=True, text=True)
+        if res.returncode != 0:
+            raise Exception(res.stderr)
+        running, pid = _is_running()
+        if running:
+             import threading
+             from app.routes.protocol import _stop_process, _check_binary
+             def do_restart():
+                 _stop_process(pid)
+                 time.sleep(1)
+                 subprocess.Popen(
+                     [str(_check_binary()), "start", "--config", str(settings.HIVOID_CONFIG_PATH)],
+                     stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, start_new_session=True
+                 )
+             threading.Thread(target=do_restart).start()
+        
+        return MessageResponse(message="Certificates successfully regenerated.")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"OpenSSL failed: {e}")
+
+@router.post("/download-geodata", response_model=MessageResponse)
+def download_geodata(
+    admin: Admin = Depends(get_current_admin),
+):
+    """
+    Download latest geoip.dat and geosite.dat from official v2fly sources.
+    """
+    import urllib.request
+    try:
+        urllib.request.urlretrieve("https://github.com/v2fly/geoip/releases/latest/download/geoip.dat", "geoip.dat")
+        urllib.request.urlretrieve("https://github.com/v2fly/domain-list-community/releases/latest/download/dlc.dat", "geosite.dat")
+        return MessageResponse(message="Routing dat files successfully fetched and updated.")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch GeoData: {e}")

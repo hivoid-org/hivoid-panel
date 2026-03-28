@@ -23,7 +23,9 @@ async function request(path, options = {}) {
 
   if (res.status === 401) {
     localStorage.removeItem('hivoid_token');
-    window.location.href = '/login';
+    if (window.location.pathname !== '/login') {
+      window.location.href = '/login';
+    }
     throw new Error('Unauthorized');
   }
 
@@ -37,12 +39,22 @@ async function request(path, options = {}) {
 
 // ── Auth ──────────────────────────────────────────────────────
 export const auth = {
-  login: (username, password) =>
+  login: (username, password, totp_code) =>
     request('/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ username, password, totp_code }),
     }),
   me: () => request('/auth/me'),
+  totpSetup: () => request('/auth/totp/setup'),
+  totpVerify: (secret, token) =>
+    request('/auth/totp/verify', {
+      method: 'POST',
+      body: JSON.stringify({ secret, token }),
+    }),
+  totpDisable: () =>
+    request('/auth/totp/disable', {
+      method: 'POST'
+    }),
   changePassword: (currentPassword, newPassword) =>
     request('/auth/change-password', {
       method: 'POST',
@@ -98,6 +110,8 @@ export const protocol = {
   stop: () => request('/protocol/stop', { method: 'POST' }),
   restart: () => request('/protocol/restart', { method: 'POST' }),
   syncConfig: () => request('/protocol/sync-config', { method: 'POST' }),
+  generateCert: () => request('/protocol/generate-cert', { method: 'POST' }),
+  downloadGeodata: () => request('/protocol/download-geodata', { method: 'POST' }),
 };
 
 // ── Settings ──────────────────────────────────────────────────

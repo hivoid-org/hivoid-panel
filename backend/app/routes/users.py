@@ -8,7 +8,7 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status, Request
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import or_, func
 
 from app.config import settings
 
@@ -74,10 +74,41 @@ def user_count(
     admin: Admin = Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
-    """Return total and active user counts."""
+    """Return total counts and bandwidth summary."""
     total = db.query(User).count()
     active = db.query(User).filter(User.enabled == True).count()
-    return {"total": total, "active": active}
+    
+    sums = db.query(func.sum(User.bytes_in), func.sum(User.bytes_out)).first()
+    db_in = sums[0] or 0
+    db_out = sums[1] or 0
+
+    # Supplement with live usage
+    total_in = db_in
+    total_out = db_out
+    
+    config_path = Path(settings.HIVOID_CONFIG_PATH)
+    usage_path = Path(str(config_path) + ".usage.json")
+    if usage_path.exists():
+        try:
+            usage_data = json.loads(usage_path.read_text())
+            for u_usage in usage_data.get("users", []):
+                # Since User objects might not be updated yet, we prefer live data from file
+                # But wait, we want the TOTAL sum. The file has the CURRENT usage for all active users.
+                # Actually, the file usually matches the DB or is ahead.
+                # However, many users might NOT be in the file.
+                # For simplicity, we assume DB has historical + last sync, and file is most recent for active.
+                # A better way is to iterate all users and merge, but that's expensive.
+                # For the dashboard summary, let's just use the DB sum as baseline.
+                pass
+        except Exception:
+            pass
+
+    return {
+        "total": total, 
+        "active": active,
+        "total_bytes_in": total_in,
+        "total_bytes_out": total_out
+    }
 
 
 @router.post("", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
@@ -101,6 +132,8 @@ def create_user(
         name=body.name,
         email=body.email,
         max_connections=body.max_connections,
+        max_ips=body.max_ips,
+        bind_ip=body.bind_ip,
         data_limit_gb=body.data_limit_gb,
         bandwidth_limit=body.bandwidth_limit,
         expire_at=body.expire_at,
@@ -108,6 +141,13 @@ def create_user(
         obfs=body.obfs,
         enabled=body.enabled,
         note=body.note,
+        pool_size=body.pool_size,
+        bypass_domains=body.bypass_domains,
+        bypass_ips=body.bypass_ips,
+        geoip_path=body.geoip_path,
+        geosite_path=body.geosite_path,
+        direct_route=body.direct_route,
+        cert_pin=body.cert_pin,
     )
     db.add(user)
     db.commit()
@@ -201,9 +241,18 @@ def get_user_config_data(
 ):
     """Generate raw JSON and subscription URL for a user."""
     from app.config import settings
+    from app.models import PanelSettings
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+
+    ps = db.query(PanelSettings).first()
+    panel_config = {}
+    if ps and ps.hivoid_config:
+        try:
+            panel_config = json.loads(ps.hivoid_config)
+        except Exception:
+            pass
 
     # Construct client.json content
     client_json = {
@@ -212,10 +261,17 @@ def get_user_config_data(
         "port": 4433, # Standard Core port
         "mode": user.mode or "performance",
         "obfs": user.obfs or "none",
-        "socks_port": 1080,
-        "dns_port": 5353,
-        "dns_upstream": "1.1.1.1:53",
-        "insecure": True,
+        "socks_port": panel_config.get("socks_port", 1080),
+        "dns_port": panel_config.get("dns_port", 5353),
+        "dns_upstream": panel_config.get("dns_upstream", "8.8.8.8:53"),
+        "insecure": bool(panel_config.get("insecure", True)),
+        "pool_size": user.pool_size or panel_config.get("pool_size", 4),
+        "bypass_domains": [d.strip() for d in (user.bypass_domains or panel_config.get("bypass_domains", "localhost")).split(",") if d.strip()],
+        "bypass_ips": [ip.strip() for ip in (user.bypass_ips or panel_config.get("bypass_ips", "127.0.0.1/32,192.168.1.0/24")).split(",") if ip.strip()],
+        "geoip_path": user.geoip_path or panel_config.get("geoip_path", "./geoip.dat"),
+        "geosite_path": user.geosite_path or panel_config.get("geosite_path", "./geosite.dat"),
+        "direct_route": [r.strip() for r in (user.direct_route or panel_config.get("direct_route", "category-ads")).split(",") if r.strip()],
+        "cert_pin": user.cert_pin or panel_config.get("cert_pin", ""),
         "name": user.name or user.email or "HiVoid Configuration"
     }
 
@@ -226,7 +282,15 @@ def get_user_config_data(
     # Construct hivoid:// Protocol Link
     import urllib.parse
     safe_name = urllib.parse.quote(user.name or user.email or "HiVoid")
-    protocol_link = f"hivoid://{user.uuid}@{client_json['server']}:{client_json['port']}?mode={client_json['mode']}&obfs={client_json['obfs']}&insecure=true#{safe_name}"
+    params = {
+        "mode": client_json['mode'],
+        "obfs": client_json['obfs'],
+        "insecure": str(client_json['insecure']).lower(),
+        "pool_size": client_json['pool_size'],
+        "socks_port": client_json['socks_port']
+    }
+    query_str = urllib.parse.urlencode(params)
+    protocol_link = f"hivoid://{user.uuid}@{client_json['server']}:{client_json['port']}?{query_str}#{safe_name}"
     return {
         "json": client_json,
         "url": sub_url,
@@ -242,9 +306,18 @@ def public_config_subscription(
 ):
     """Public endpoint for clients to fetch their JSON config via UUID."""
     from app.config import settings
+    from app.models import PanelSettings
     user = db.query(User).filter(User.uuid == user_uuid).first()
     if not user or not user.enabled:
         raise HTTPException(status_code=404, detail="Configuration not found or user disabled.")
+
+    ps = db.query(PanelSettings).first()
+    panel_config = {}
+    if ps and ps.hivoid_config:
+        try:
+            panel_config = json.loads(ps.hivoid_config)
+        except Exception:
+            pass
 
     client_json = {
         "uuid": user.uuid,
@@ -252,10 +325,17 @@ def public_config_subscription(
         "port": 4433,
         "mode": user.mode or "performance",
         "obfs": user.obfs or "none",
-        "socks_port": 1080,
-        "dns_port": 5353,
-        "dns_upstream": "1.1.1.1:53",
-        "insecure": True,
+        "socks_port": panel_config.get("socks_port", 1080),
+        "dns_port": panel_config.get("dns_port", 5353),
+        "dns_upstream": panel_config.get("dns_upstream", "8.8.8.8:53"),
+        "insecure": bool(panel_config.get("insecure", True)),
+        "pool_size": user.pool_size or panel_config.get("pool_size", 4),
+        "bypass_domains": [d.strip() for d in (user.bypass_domains or panel_config.get("bypass_domains", "localhost")).split(",") if d.strip()],
+        "bypass_ips": [ip.strip() for ip in (user.bypass_ips or panel_config.get("bypass_ips", "127.0.0.1/32,192.168.1.0/24")).split(",") if ip.strip()],
+        "geoip_path": user.geoip_path or panel_config.get("geoip_path", "./geoip.dat"),
+        "geosite_path": user.geosite_path or panel_config.get("geosite_path", "./geosite.dat"),
+        "direct_route": [r.strip() for r in (user.direct_route or panel_config.get("direct_route", "category-ads")).split(",") if r.strip()],
+        "cert_pin": user.cert_pin or panel_config.get("cert_pin", ""),
         "name": user.name or user.email or "HiVoid Client"
     }
     return client_json

@@ -1,11 +1,28 @@
 import { useEffect, useState } from 'react';
-import { Save, Lock, Loader2, Eye, EyeOff, Shield, Key, Check, UserCircle } from 'lucide-react';
+import { 
+  Save as SaveIcon, 
+  Lock as LockIcon, 
+  Loader2 as LoaderIcon, 
+  Eye as EyeIcon, 
+  EyeOff as EyeOffIcon, 
+  Shield as ShieldIcon, 
+  Key as KeyIcon, 
+  Check as CheckIcon, 
+  UserCircle as UserIcon,
+  Terminal as TerminalIcon,
+  Database as DatabaseIcon,
+  Cpu as CpuIcon,
+  Globe as GlobeIcon
+} from 'lucide-react';
 import { settings as settingsApi, auth as authApi } from '../api';
 import clsx from 'clsx';
 
 export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
+  const [activeTab, setActiveTab] = useState('admin');
+  const [totpEnabled, setTotpEnabled] = useState(false);
+  const [show2FAModal, setShow2FAModal] = useState(false);
 
   const [username, setUsername] = useState('');
   const [usernameLoading, setUsernameLoading] = useState(false);
@@ -19,6 +36,7 @@ export default function SettingsPage() {
       try {
         const user = await authApi.me();
         setUsername(user.username);
+        setTotpEnabled(user.totp_enabled);
         await settingsApi.get();
       } catch (e) {
         console.error(e);
@@ -71,120 +89,312 @@ export default function SettingsPage() {
   );
 
   return (
-    <div className="max-w-xl mx-auto space-y-6 animate-in pb-12">
+    <div className="w-full space-y-8 animate-in pb-12">
       {toast && (
         <div className={clsx(
           'fixed bottom-8 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-2xl text-sm font-bold shadow-apple-lg flex items-center gap-3 transition-transform',
           toast.ok ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900' : 'bg-danger text-white'
         )}>
-          {toast.ok ? <Check className="w-4 h-4" /> : <Shield className="w-4 h-4" />}
+          {toast.ok ? <CheckIcon className="w-4 h-4" /> : <ShieldIcon className="w-4 h-4" />}
           {toast.msg}
         </div>
       )}
 
-      {/* Hero Header */}
-      <div className="text-center py-6">
-        <div className="w-16 h-16 rounded-[2rem] bg-neutral-100 dark:bg-neutral-900 flex items-center justify-center mx-auto mb-4 border border-neutral-200 dark:border-neutral-800">
-           <Shield className="w-7 h-7 text-neutral-500" />
-        </div>
-        <h2 className="text-xl font-black tracking-tight">System Security</h2>
-        <p className="text-sm text-neutral-400 mt-1">Manage global administrator access.</p>
-      </div>
-
-      {/* Username Identity Section */}
-      <div className="card overflow-hidden">
-        <div className="px-6 py-5 border-b border-neutral-100 dark:border-neutral-800 flex items-center gap-3">
-           <UserCircle className="w-4 h-4 text-neutral-400" />
-           <span className="text-sm font-bold">Username</span>
-        </div>
-        <div className="p-8">
-          <form onSubmit={handleUpdateUsername} className="space-y-6">
-            <Field label="Administrator Username">
-                <input
-                  type="text"
-                  value={username}
-                  onChange={e => setUsername(e.target.value)}
-                  className="input h-12 bg-neutral-50 dark:bg-neutral-950 px-5 font-bold text-sm"
-                  required
-                />
-            </Field>
-
-            <div className="pt-2">
-              <button type="submit" disabled={usernameLoading} className="btn-primary w-full h-12 rounded-2xl shadow-apple-sm text-sm font-black">
-                {usernameLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Update Username'}
-              </button>
-            </div>
-          </form>
+      {/* Modern Header */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 px-2">
+        <div>
+          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 mb-1">
+             <SettingsIcon className="w-3 h-3" /> Panel Customization
+          </div>
+          <h1 className="text-4xl font-black tracking-tighter">System Settings</h1>
         </div>
       </div>
 
-      {/* Security Credentials Section */}
-      <div className="card overflow-hidden">
-        <div className="px-6 py-5 border-b border-neutral-100 dark:border-neutral-800 flex items-center gap-3">
-           <Key className="w-4 h-4 text-neutral-400" />
-           <span className="text-sm font-bold">Password</span>
+      <div className="flex flex-col lg:flex-row gap-8">
+        {/* Settings Navigation */}
+        <div className="w-full lg:w-72 space-y-2 shrink-0">
+           <TabItem active={activeTab === 'admin'} onClick={() => setActiveTab('admin')} icon={UserIcon} label="Admin Account" />
+           <TabItem active={activeTab === 'system'} onClick={() => setActiveTab('system')} icon={TerminalIcon} label="System Engine" />
+           <TabItem active={activeTab === 'security'} onClick={() => setActiveTab('security')} icon={ShieldIcon} label="Authentication" />
+           
         </div>
-        <div className="p-8">
-          <form onSubmit={handlePw} className="space-y-6">
-            <Field label="Current Authority Password">
-              <div className="relative">
-                <input
-                  type={showPw ? 'text' : 'password'}
-                  value={pw.current}
-                  onChange={e => setPw(p => ({...p, current: e.target.value}))}
-                  className="input h-12 bg-neutral-50 dark:bg-neutral-950 pr-12 font-mono text-sm"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPw(!showPw)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors"
-                >
-                  {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+
+        {/* Settings Content Area */}
+        <div className="flex-1 card p-8 min-h-[500px]">
+           {activeTab === 'admin' && (
+              <div className="space-y-8 animate-in slide-in-from-right-2">
+                 <div>
+                    <h3 className="text-xl font-black tracking-tight mb-1">Administrator Profile</h3>
+                    <p className="text-xs text-neutral-500 font-bold uppercase tracking-tighter">Manage primary access identity</p>
+                 </div>
+                 
+                 <form onSubmit={handleUpdateUsername} className="space-y-6 pt-4">
+                    <SettingField label="Primary Username" sub="Used for panel authentication.">
+                        <div className="flex gap-3">
+                           <input 
+                            value={username} 
+                            onChange={e => setUsername(e.target.value)} 
+                            className="input flex-1 font-bold h-12 rounded-2xl" 
+                            placeholder="Administrator Name"
+                           />
+                           <button type="submit" disabled={usernameLoading} className="btn-primary px-8 rounded-2xl h-12 shadow-apple-lg min-w-[120px]">
+                              {usernameLoading ? <LoaderIcon className="w-4 h-4 animate-spin" /> : 'Save'}
+                           </button>
+                        </div>
+                    </SettingField>
+                 </form>
+                 <div className="pt-8 border-t border-neutral-100 dark:border-neutral-800">
+                    <div className="flex items-center justify-between">
+                       <div>
+                          <h4 className="text-sm font-black uppercase tracking-widest">Two-Factor Authentication</h4>
+                          <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider">Secure your account with an Authenticator app</p>
+                       </div>
+                       <button 
+                        onClick={() => setShow2FAModal(true)}
+                        className={clsx(
+                           "px-6 h-10 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all",
+                           totpEnabled ? "bg-danger/10 text-danger border border-danger/20" : "bg-success/10 text-success border border-success/20"
+                        )}
+                       >
+                          {totpEnabled ? 'Disable 2FA' : 'Enable 2FA'}
+                       </button>
+                    </div>
+                 </div>
               </div>
-            </Field>
+           )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <Field label="New Secure Key">
-                <input
-                  type={showPw ? 'text' : 'password'}
-                  value={pw.new_}
-                  onChange={e => setPw(p => ({...p, new_: e.target.value}))}
-                  className="input h-12 bg-neutral-50 dark:bg-neutral-950 font-mono text-sm"
-                  required
-                  minLength={6}
-                  placeholder="Min 6 characters"
-                />
-              </Field>
-              <Field label="Repeat New Key">
-                <input
-                  type={showPw ? 'text' : 'password'}
-                  value={pw.confirm}
-                  onChange={e => setPw(p => ({...p, confirm: e.target.value}))}
-                  className="input h-12 bg-neutral-50 dark:bg-neutral-950 font-mono text-sm"
-                  required
-                />
-              </Field>
-            </div>
+           {activeTab === 'system' && (
+              <div className="space-y-8 animate-in slide-in-from-right-2">
+                  <div>
+                    <h3 className="text-xl font-black tracking-tight mb-1">System Engine Paths</h3>
+                    <p className="text-xs text-neutral-500 font-bold uppercase tracking-tighter">Internal directory & binary locations</p>
+                 </div>
+                 <div className="space-y-6 pt-4">
+                     <StaticField label="Binary Execution Path" value="/usr/local/bin/hivoid-server" />
+                     <StaticField label="Configuration Pipeline" value="/etc/hivoid/server.json" />
+                     <StaticField label="Persistent Database" value="/var/lib/hivoid/panel.db" />
+                     <StaticField label="Logging Stream" value="/var/log/hivoid/access.log" />
+                 </div>
+              </div>
+           )}
 
-            <div className="pt-4">
-              <button type="submit" disabled={pwLoading} className="btn-primary w-full h-12 rounded-2xl shadow-apple-sm text-sm font-black">
-                {pwLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Update Authority Key'}
-              </button>
-            </div>
-          </form>
+           {activeTab === 'security' && (
+              <div className="space-y-8 animate-in slide-in-from-right-2">
+                 <div>
+                    <h3 className="text-xl font-black tracking-tight mb-1">Passphrase Management</h3>
+                    <p className="text-xs text-neutral-500 font-bold uppercase tracking-tighter">Rotate root access credentials</p>
+                 </div>
+
+                 <form onSubmit={handlePw} className="space-y-6 pt-4">
+                    <SettingField label="Current Secret" sub="Validate existing identity.">
+                        <div className="relative">
+                           <input 
+                            type={showPw ? 'text' : 'password'}
+                            value={pw.current} 
+                            onChange={e => setPw({...pw, current: e.target.value})} 
+                            className="input font-mono h-12 rounded-2xl" 
+                            placeholder="Required for changes"
+                            required
+                           />
+                           <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-900 transition-colors">
+                              {showPw ? <EyeOffIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
+                           </button>
+                        </div>
+                    </SettingField>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+                       <SettingField label="New Passphrase" sub="Minimum 6 characters.">
+                           <input 
+                            type={showPw ? 'text' : 'password'}
+                            value={pw.new_} 
+                            onChange={e => setPw({...pw, new_: e.target.value})} 
+                            className="input font-mono h-12 rounded-2xl" 
+                            placeholder="••••••••"
+                            required
+                           />
+                       </SettingField>
+                       <SettingField label="Confirm Passphrase" sub="Must match exactly.">
+                           <input 
+                            type={showPw ? 'text' : 'password'}
+                            value={pw.confirm} 
+                            onChange={e => setPw({...pw, confirm: e.target.value})} 
+                            className="input font-mono h-12 rounded-2xl" 
+                            placeholder="••••••••"
+                            required
+                           />
+                       </SettingField>
+                    </div>
+
+                    <div className="pt-8 border-t border-neutral-100 dark:border-neutral-800 flex justify-end">
+                       <button type="submit" disabled={pwLoading} className="btn-primary px-12 h-12 rounded-2xl shadow-apple-lg text-sm font-black min-w-[200px]">
+                          {pwLoading ? <LoaderIcon className="w-5 h-5 animate-spin" /> : <>Update Credentials</>}
+                       </button>
+                    </div>
+                 </form>
+              </div>
+           )}
         </div>
+      {show2FAModal && (
+        <TwoFAModal 
+            enabled={totpEnabled} 
+            onClose={() => setShow2FAModal(false)}
+            onComplete={(en) => { setTotpEnabled(en); setShow2FAModal(false); notify(en ? '2FA Enabled' : '2FA Disabled'); }}
+        />
+      )}
+    </div>
+  </div>
+);
+}
+
+function TwoFAModal({ enabled, onClose, onComplete }) {
+    const [step, setStep] = useState(enabled ? 'disable' : 'intro');
+    const [setup, setSetup] = useState(null);
+    const [token, setToken] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+
+    const startSetup = async () => {
+        setLoading(true);
+        try {
+            const data = await authApi.totpSetup();
+            setSetup(data);
+            setStep('setup');
+        } catch (e) { setError(e.message); }
+        finally { setLoading(false); }
+    };
+
+    const verifySetup = async () => {
+        setLoading(true);
+        try {
+            await authApi.totpVerify(setup.secret, token);
+            onComplete(true);
+        } catch (e) { setError(e.message); }
+        finally { setLoading(false); }
+    };
+
+    const disable = async () => {
+        if (!confirm('Are you sure? This will reduce account security.')) return;
+        setLoading(true);
+        try {
+            await authApi.totpDisable();
+            onComplete(false);
+        } catch (e) { setError(e.message); }
+        finally { setLoading(false); }
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+            <div className="relative w-full max-w-sm bg-white dark:bg-neutral-900 rounded-[2rem] shadow-apple-2xl p-8 animate-in zoom-in-95">
+                <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-lg font-black tracking-tight">{enabled ? 'Disable 2FA' : 'Setup 2FA'}</h3>
+                    <button onClick={onClose} className="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800"><CheckIcon className="w-5 h-5 text-neutral-400 rotate-45" /></button>
+                </div>
+
+                {error && <div className="mb-4 text-xs font-bold text-danger bg-danger/10 p-3 rounded-xl">{error}</div>}
+
+                {step === 'intro' && (
+                    <div className="space-y-6">
+                        <p className="text-xs text-neutral-500 font-medium leading-relaxed">Two-factor authentication adds an extra layer of security to your account by requiring more than just a password to log in.</p>
+                        <button onClick={startSetup} disabled={loading} className="btn-primary w-full h-12 rounded-2xl font-black">
+                            {loading ? <LoaderIcon className="w-4 h-4 animate-spin mx-auto" /> : 'Get Started'}
+                        </button>
+                    </div>
+                )}
+
+                {step === 'setup' && setup && (
+                    <div className="space-y-6 text-center">
+                        <div className="bg-white p-4 rounded-2xl inline-block mx-auto border border-neutral-100">
+                            <img src={setup.qr_code} alt="QR Code" className="w-48 h-48" />
+                        </div>
+                        <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest">Scan this code with Google Authenticator or Authy</p>
+                        <div className="text-left space-y-4">
+                            <div className="space-y-1.5 text-center">
+                                <label className="text-[10px] font-bold uppercase text-neutral-500">Manual Entry Key</label>
+                                <div className="p-3 bg-neutral-100 dark:bg-neutral-800 rounded-xl font-mono text-xs select-all text-center">{setup.secret}</div>
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-bold uppercase text-neutral-500 block text-center">Verification Token</label>
+                                <input 
+                                    value={token} 
+                                    onChange={e => setToken(e.target.value)} 
+                                    className="input text-center text-xl font-bold tracking-[0.5em] h-14" 
+                                    placeholder="000000"
+                                    maxLength={6}
+                                />
+                            </div>
+                        </div>
+                        <button onClick={verifySetup} disabled={loading || token.length < 6} className="btn-primary w-full h-12 rounded-2xl font-black">
+                             {loading ? <LoaderIcon className="w-4 h-4 animate-spin mx-auto" /> : 'Verify & Enable'}
+                        </button>
+                    </div>
+                )}
+
+                {step === 'disable' && (
+                    <div className="space-y-6">
+                        <p className="text-xs text-neutral-500 font-medium leading-relaxed">Disabling 2FA will make your account vulnerable to password-only attacks. Continue?</p>
+                        <button onClick={disable} disabled={loading} className="btn bg-danger/10 hover:bg-danger/20 text-danger w-full h-12 rounded-2xl font-black">
+                            {loading ? <LoaderIcon className="w-4 h-4 animate-spin mx-auto" /> : 'Confirm Disable'}
+                        </button>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
+function TabItem({ active, onClick, icon: Icon, label }) {
+  return (
+    <button onClick={onClick} className={clsx(
+      "flex items-center gap-4 px-6 py-4 rounded-2xl text-sm font-bold transition-all w-full text-left",
+      active 
+        ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 shadow-apple-lg" 
+        : "text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+    )}>
+      <Icon className="w-4 h-4" /> {label}
+    </button>
+  );
+}
+
+function SettingField({ label, sub, children }) {
+  return (
+    <div className="space-y-2">
+      <div className="px-1">
+        <label className="text-sm font-black tracking-tight block">{label}</label>
+        <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider">{sub}</p>
       </div>
+      {children}
     </div>
   );
 }
 
-function Field({ label, children }) {
+function StaticField({ label, value }) {
   return (
-    <div className="space-y-2">
-      <label className="block text-[10px] font-black text-neutral-400 uppercase tracking-widest ml-1">{label}</label>
-      {children}
+    <div className="flex flex-col md:flex-row md:items-center justify-between p-5 rounded-2xl bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-100 dark:border-neutral-800">
+       <span className="text-xs font-bold text-neutral-500">{label}</span>
+       <span className="text-[11px] font-black font-mono text-neutral-900 dark:text-white mt-1 md:mt-0">{value}</span>
     </div>
+  );
+}
+
+function InfoTile({ icon: Icon, label, value }) {
+  return (
+    <div className="flex items-center gap-4">
+       <div className="w-12 h-12 rounded-2xl bg-neutral-50 dark:bg-neutral-900 flex items-center justify-center">
+          <Icon className="w-5 h-5 text-neutral-400" />
+       </div>
+       <div>
+          <p className="text-[10px] font-black uppercase text-neutral-400 tracking-widest">{label}</p>
+          <p className="text-sm font-black">{value}</p>
+       </div>
+    </div>
+  );
+}
+
+function SettingsIcon(props) {
+  return (
+    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>
+    </svg>
   );
 }

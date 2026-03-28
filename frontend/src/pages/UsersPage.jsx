@@ -1,9 +1,36 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
-  Search, Plus, Trash2, Edit3, X, RefreshCw, Loader2, UserCheck, Fingerprint,
-  Calendar, Download, Upload, Copy, Share2, Check, FileJson, Link, Zap
+  Search as SearchIcon, 
+  Plus as PlusIcon, 
+  Trash2 as TrashIcon, 
+  Edit3 as EditIcon, 
+  X as CloseIcon, 
+  RefreshCw as RefreshIcon, 
+  Loader2 as LoaderIcon, 
+  UserCheck as UserCheckIcon, 
+  Fingerprint as FingerprintIcon,
+  Calendar as CalendarIcon, 
+  Download as DownloadIcon, 
+  Upload as UploadIcon, 
+  Copy as CopyIcon, 
+  Share2 as ShareIcon, 
+  Check as CheckIcon, 
+  FileJson as JsonIcon, 
+  Link as LinkIcon, 
+  Zap as ZapIcon,
+  Globe as GlobeIcon, 
+  Shield as ShieldIcon, 
+  Gauge as GaugeIcon, 
+  Cpu as CpuIcon, 
+  User as UserIcon, 
+  Mail as MailIcon, 
+  Database as DatabaseIcon, 
+  Info as InfoIcon, 
+  Activity as ActivityIcon, 
+  Clock as ClockIcon,
+  Lock as LockIcon
 } from 'lucide-react';
-import { users as usersApi } from '../api';
+import { users as usersApi, protocol as protocolApi } from '../api';
 import clsx from 'clsx';
 
 const MODES = [
@@ -21,6 +48,15 @@ const OBFS = [
   { value: 'masque', label: 'Masque' },
   { value: 'webtransport', label: 'WebTransport' },
   { value: 'ghost', label: 'Ghost' },
+];
+
+const ROUTE_CATEGORIES = [
+  'category-ads-all', 'category-ads', 'category-behavior-ads', 'category-behavior-tracking',
+  'category-social', 'category-media', 'category-speedtest', 'category-scholar', 
+  'category-games', 'category-games-cn', 'category-games-!cn', 'category-entertainment',
+  'category-porn', 'category-ip-geo-detect', 'category-gov-ir', 'category-bank-ir', 
+  'category-ir', 'cn', 'geolocation-cn', 'geolocation-!cn', 'google', 'apple', 
+  'microsoft', 'amazon', 'facebook', 'netflix', 'disney', 'telegram', 'twitter', 'openai'
 ];
 
 export default function UsersPage() {
@@ -55,125 +91,118 @@ export default function UsersPage() {
 
   const fmtBytes = (b) => {
     if (!b) return '0 B';
-    const k = 1024, s = ['B','KB','MB','GB','TB'], i = Math.floor(Math.log(b)/Math.log(k));
-    return parseFloat((b / Math.pow(k, i)).toFixed(1)) + ' ' + s[i];
+    const k = 1024, s = ['B','KB','MB','GB','TB'];
+    const idx = Math.floor(Math.log(b) / Math.log(k));
+    return parseFloat((b / Math.pow(k, idx)).toFixed(1)) + ' ' + s[idx];
   };
 
   return (
-    <div className="space-y-6 animate-in max-w-6xl">
-      {/* Toast */}
+    <div className="space-y-6 animate-in w-full pb-12">
       {toast && (
         <div className={clsx(
-          'fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-xl text-sm font-medium animate-in',
+          'fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-xl text-sm font-medium animate-in shadow-apple-lg',
           toast.ok ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900' : 'bg-danger text-white'
         )}>{toast.msg}</div>
       )}
 
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 px-2">
         <div>
-          <h2 className="text-lg font-bold">Users</h2>
-          <p className="text-sm text-neutral-500">{users.length} registered · {users.filter(u => u.enabled).length} active</p>
+          <h2 className="text-2xl font-black tracking-tighter">Identity Management</h2>
+          <div className="flex items-center gap-3 mt-1 text-[10px] font-black uppercase tracking-widest text-neutral-400">
+             <span>{users.length} Total Registered</span>
+             <span className="w-1 h-1 rounded-full bg-neutral-300" />
+             <span className="text-success">{users.filter(u => u.enabled).length} Active</span>
+          </div>
         </div>
         <div className="flex items-center gap-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+          <div className="relative group">
+            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 group-focus-within:text-primary transition-colors" />
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="input pl-9 w-64"
-              placeholder="Search..."
+              className="input pl-10 w-full md:w-72 h-11 rounded-2xl bg-white dark:bg-neutral-900 border-neutral-100 dark:border-neutral-800"
+              placeholder="Query Name, UUID or Email..."
             />
           </div>
-          <button onClick={() => { setEditUser(null); setShowModal(true); }} className="btn-primary">
-            <Plus className="w-4 h-4" />
-            Add user
+          <button onClick={() => { setEditUser(null); setShowModal(true); }} className="btn-primary h-11 px-6 rounded-2xl shadow-apple-sm">
+            <PlusIcon className="w-4 h-4 mr-1.5" strokeWidth={3} />
+            Provision User
           </button>
         </div>
       </div>
 
-      {/* Table */}
       <div className="card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-neutral-100 dark:border-neutral-800">
-                <th className="text-left px-5 py-3 text-xs font-medium text-neutral-400 uppercase tracking-wider">Name</th>
-                <th className="text-left px-5 py-3 text-xs font-medium text-neutral-400 uppercase tracking-wider hidden md:table-cell">UUID</th>
-                <th className="text-left px-5 py-3 text-xs font-medium text-neutral-400 uppercase tracking-wider hidden lg:table-cell">Mode / Obfs</th>
-                <th className="text-left px-5 py-3 text-xs font-medium text-neutral-400 uppercase tracking-wider hidden lg:table-cell">Traffic</th>
-                <th className="text-left px-5 py-3 text-xs font-medium text-neutral-400 uppercase tracking-wider hidden xl:table-cell">Limits</th>
-                <th className="text-center px-5 py-3 text-xs font-medium text-neutral-400 uppercase tracking-wider">Status</th>
-                <th className="text-right px-5 py-3 text-xs font-medium text-neutral-400 uppercase tracking-wider">Actions</th>
+              <tr className="bg-neutral-50/50 dark:bg-neutral-900/50 border-b border-neutral-100 dark:border-neutral-800">
+                <th className="text-left px-6 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-widest">Subscriber Identity</th>
+                <th className="text-left px-6 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-widest hidden lg:table-cell">Heuristics</th>
+                <th className="text-left px-6 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-widest hidden md:table-cell">Throughput</th>
+                <th className="text-left px-6 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-widest hidden xl:table-cell">Quotas & Expiry</th>
+                <th className="text-center px-6 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-widest">Status</th>
+                <th className="text-right px-6 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-widest">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
               {loading ? (
-                <tr><td colSpan={7} className="text-center py-12"><Loader2 className="w-5 h-5 animate-spin mx-auto text-neutral-400" /></td></tr>
+                <tr><td colSpan={6} className="text-center py-24"><LoaderIcon className="w-6 h-6 animate-spin mx-auto text-neutral-300" /></td></tr>
               ) : users.length === 0 ? (
-                <tr><td colSpan={7} className="text-center py-12 text-neutral-400">No users found</td></tr>
+                <tr><td colSpan={6} className="text-center py-24 text-neutral-400 font-bold">Zero users matching current scope.</td></tr>
               ) : users.map(u => (
-                <tr key={u.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
-                  {/* Name */}
-                  <td className="px-5 py-3.5">
-                    <div>
-                      <p className="font-medium">{u.name}</p>
-                      {u.email && <p className="text-xs text-neutral-400 mt-0.5">{u.email}</p>}
+                <tr key={u.id} className={clsx("hover:bg-neutral-50/50 dark:hover:bg-neutral-900/30 transition-all", !u.enabled && "opacity-60")}>
+                  <td className="px-6 py-5">
+                    <div className="flex items-center gap-4">
+                       <div className="w-10 h-10 rounded-xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center font-black text-neutral-500 text-xs shrink-0">
+                          {u.name.charAt(0).toUpperCase()}
+                       </div>
+                       <div className="min-w-0">
+                          <p className="font-bold tracking-tight truncate">{u.name}</p>
+                          <p className="text-[10px] text-neutral-400 font-mono mt-0.5 truncate">{u.uuid}</p>
+                       </div>
                     </div>
                   </td>
-                  {/* UUID */}
-                  <td className="px-5 py-3.5 hidden md:table-cell">
-                    <button
-                      onClick={() => { navigator.clipboard.writeText(u.uuid); notify('UUID copied'); }}
-                      className="flex items-center gap-1.5 text-xs text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 font-mono transition-colors"
-                    >
-                      {u.uuid.substring(0, 8)}…
-                      <Copy className="w-3 h-3" />
-                    </button>
-                  </td>
-                  {/* Mode / Obfs */}
-                  <td className="px-5 py-3.5 hidden lg:table-cell">
-                    <span className="text-xs font-medium text-neutral-600 dark:text-neutral-400">{u.mode}</span>
-                    {u.obfs !== 'none' && <span className="text-xs text-neutral-400 ml-1.5">· {u.obfs}</span>}
-                  </td>
-                  {/* Traffic */}
-                  <td className="px-5 py-3.5 hidden lg:table-cell">
-                    <div className="flex items-center gap-3 text-xs text-neutral-500">
-                      <span className="flex items-center gap-1"><ArrowDown className="w-3 h-3" />{fmtBytes(u.bytes_in)}</span>
-                      <span className="flex items-center gap-1"><ArrowUp className="w-3 h-3" />{fmtBytes(u.bytes_out)}</span>
+                  <td className="px-6 py-5 hidden lg:table-cell">
+                    <div className="flex flex-col gap-1">
+                       <span className="text-[10px] font-black uppercase text-neutral-500 bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded-md self-start">{u.mode || 'performance'}</span>
+                       <span className="text-[10px] font-bold text-neutral-400 ml-0.5">{u.obfs !== 'none' ? `Obfs: ${u.obfs}` : 'No Encryption'}</span>
                     </div>
                   </td>
-                  {/* Limits */}
-                  <td className="px-5 py-3.5 hidden xl:table-cell text-xs text-neutral-500">
-                    {u.max_connections || '∞'} conns · {u.bandwidth_limit ? `${u.bandwidth_limit} KB/s` : '∞'}
-                    {u.expire_at && (
-                      <span className={clsx('block mt-0.5', new Date(u.expire_at) < new Date() ? 'text-danger' : '')}>
-                        Exp: {new Date(u.expire_at).toLocaleDateString()}
-                      </span>
-                    )}
+                  <td className="px-6 py-5 hidden md:table-cell">
+                    <div className="space-y-1.5">
+                       <div className="flex items-center gap-2 text-[10px] font-bold text-neutral-500">
+                          <DownloadIcon className="w-3 h-3 text-success" /> {fmtBytes(u.bytes_in)}
+                       </div>
+                       <div className="flex items-center gap-2 text-[10px] font-bold text-neutral-500">
+                          <UploadIcon className="w-3 h-3 text-primary" /> {fmtBytes(u.bytes_out)}
+                       </div>
+                    </div>
                   </td>
-                  {/* Status */}
-                  <td className="px-5 py-3.5 text-center">
-                    <span className={clsx(
-                      'inline-block w-2 h-2 rounded-full',
-                      u.enabled ? 'bg-success' : 'bg-neutral-300 dark:bg-neutral-600'
-                    )} />
+                  <td className="px-6 py-5 hidden xl:table-cell">
+                    <div className="text-[11px] space-y-1">
+                       <p className="font-bold text-neutral-600 dark:text-neutral-400">{u.max_connections || '∞'} Streams · {u.bandwidth_limit ? `${u.bandwidth_limit} KB/s` : 'Unlmt'}</p>
+                       {u.expire_at ? (
+                          <div className={clsx("flex items-center gap-1.5 font-black uppercase text-[9px]", new Date(u.expire_at) < new Date() ? "text-danger" : "text-neutral-400")}>
+                             <ClockIcon className="w-3 h-3" /> {new Date(u.expire_at).toLocaleDateString()}
+                          </div>
+                       ) : <p className="text-[9px] font-black uppercase text-neutral-300">Lifetime Active</p>}
+                    </div>
                   </td>
-                  {/* Actions */}
-                  <td className="px-5 py-3.5 text-right">
+                  <td className="px-6 py-5 text-center">
+                    <div className={clsx(
+                      "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest",
+                      u.enabled ? "bg-success/10 text-success" : "bg-neutral-100 text-neutral-400 dark:bg-neutral-800"
+                    )}>
+                      <span className={clsx("w-1.5 h-1.5 rounded-full", u.enabled ? "bg-success shadow-success/40" : "bg-neutral-300")} />
+                      {u.enabled ? 'Active' : 'Halted'}
+                    </div>
+                  </td>
+                  <td className="px-6 py-5 text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <button onClick={() => toggleUser(u)} className="p-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors" title={u.enabled ? 'Disable' : 'Enable'}>
-                        <UserCheck className="w-4 h-4" />
-                      </button>
-                      <button onClick={() => { setEditUser(u); setShowModal(true); }} className="p-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors">
-                        <Edit3 className="w-4 h-4" />
-                      </button>
-                      <button onClick={() => { setConfigUser(u); setShowConfigModal(true); }} className="p-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 hover:text-primary transition-colors" title="Configuration">
-                        <Share2 className="w-4 h-4" />
-                      </button>
-                      <button onClick={() => deleteUser(u)} className="p-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 hover:text-danger transition-colors">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                       <GridActionButton icon={UserCheckIcon} onClick={() => toggleUser(u)} color="hover:text-success" title={u.enabled ? 'Suspend' : 'Resume'} />
+                       <GridActionButton icon={ShareIcon} onClick={() => { setConfigUser(u); setShowConfigModal(true); }} color="hover:text-primary" title="Export Config" />
+                       <GridActionButton icon={EditIcon} onClick={() => { setEditUser(u); setShowModal(true); }} color="hover:text-neutral-900 dark:hover:text-white" title="Modify" />
+                       <GridActionButton icon={TrashIcon} onClick={() => deleteUser(u)} color="hover:text-danger" title="Purge" />
                     </div>
                   </td>
                 </tr>
@@ -187,7 +216,7 @@ export default function UsersPage() {
         <UserModal
           user={editUser}
           onClose={() => setShowModal(false)}
-          onSaved={() => { setShowModal(false); load(); notify(editUser ? 'User updated' : 'User created'); }}
+          onSaved={() => { setShowModal(false); load(); notify(editUser ? 'Identity parameters updated' : 'Subscriber provisioned'); }}
         />
       )}
 
@@ -202,20 +231,25 @@ export default function UsersPage() {
   );
 }
 
-function ArrowDown(props) {
-  return <Download {...props} />;
-}
-function ArrowUp(props) {
-  return <Upload {...props} />;
+function GridActionButton({ icon: Icon, onClick, color, title }) {
+  return (
+    <button onClick={onClick} className={clsx("p-2 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 transition-all", color)} title={title}>
+       <Icon className="w-4 h-4" />
+    </button>
+  );
 }
 
 function UserModal({ user, onClose, onSaved }) {
   const isEdit = !!user;
+  const [activeTab, setActiveTab] = useState('basic');
+  const [status, setStatus] = useState(null);
   const [form, setForm] = useState({
     name: user?.name || '',
     email: user?.email || '',
     uuid: user?.uuid || '',
     max_connections: user?.max_connections || 0,
+    max_ips: user?.max_ips || 0,
+    bind_ip: user?.bind_ip || '',
     data_limit_gb: user?.data_limit_gb || 0,
     bandwidth_limit: user?.bandwidth_limit || 0,
     expire_at: user?.expire_at || '',
@@ -223,13 +257,54 @@ function UserModal({ user, onClose, onSaved }) {
     obfs: user?.obfs || 'none',
     enabled: user?.enabled ?? true,
     note: user?.note || '',
+    pool_size: user?.pool_size || 4,
+    bypass_domains: user?.bypass_domains || 'localhost',
+    bypass_ips: user?.bypass_ips || '127.0.0.1/32, 192.168.1.0/24',
+    geoip_path: user?.geoip_path || './geoip.dat',
+    geosite_path: user?.geosite_path || './geosite.dat',
+    direct_route: user?.direct_route || 'category-ads',
+    cert_pin: user?.cert_pin || '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  useEffect(() => {
+    protocolApi.status().then(setStatus).catch(console.error);
+  }, []);
+
+  const [bandwidthUI, setBandwidthUI] = useState(() => {
+    const val = user?.bandwidth_limit || 0;
+    if (val >= 1048576) return { value: Math.round(val / 1048576), unit: 'GB' };
+    if (val >= 1024) return { value: Math.round(val / 1024), unit: 'MB' };
+    return { value: val, unit: 'KB' };
+  });
+
+  const updateBandwidth = (v, u) => {
+    setBandwidthUI({ value: v, unit: u });
+    let kb = parseInt(v) || 0;
+    if (u === 'MB') kb *= 1024;
+    if (u === 'GB') kb *= 1048576;
+    setForm(f => ({ ...f, bandwidth_limit: kb }));
+  };
+
   const genUuid = async () => {
     try { const d = await usersApi.generateUuid(); setForm(f => ({ ...f, uuid: d.uuid })); }
     catch (e) { setError(e.message); }
+  };
+
+  const fetchPin = () => {
+    if (status?.cert_pin) {
+        setForm(f => ({ ...f, cert_pin: status.cert_pin }));
+    }
+  };
+
+  const toggleCategory = (cat) => {
+    const list = form.direct_route.split(',').map(s => s.trim()).filter(Boolean);
+    if (list.includes(cat)) {
+        setForm({ ...form, direct_route: list.filter(c => c !== cat).join(', ') });
+    } else {
+        setForm({ ...form, direct_route: [...list, cat].join(', ') });
+    }
   };
 
   const submit = async (e) => {
@@ -243,79 +318,171 @@ function UserModal({ user, onClose, onSaved }) {
     finally { setLoading(false); }
   };
 
+  const tabClass = (id) => clsx(
+    "flex-1 text-center py-2.5 text-[10px] font-black uppercase tracking-widest border-b-2 transition-all",
+    activeTab === id ? "border-neutral-900 dark:border-white text-neutral-900 dark:text-white" : "border-transparent text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300"
+  );
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/30 dark:bg-black/50" onClick={onClose} />
-      <div className="relative w-full max-w-lg bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-6 max-h-[90vh] overflow-y-auto animate-in">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-base font-bold">{isEdit ? 'Edit user' : 'Create user'}</h3>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400"><X className="w-4 h-4" /></button>
-        </div>
-
-        {error && <div className="mb-4 p-3 rounded-xl bg-danger/10 text-danger text-sm font-medium">{error}</div>}
-
-        <form onSubmit={submit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <Field label="Name"><input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="input" required /></Field>
-            <Field label="Email"><input value={form.email} onChange={e => setForm({...form, email: e.target.value})} className="input" /></Field>
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-xl bg-white dark:bg-neutral-900 rounded-[2rem] shadow-apple-2xl border border-neutral-100 dark:border-neutral-800 overflow-hidden animate-in zoom-in-95 duration-200">
+        <form onSubmit={submit}>
+          <div className="px-8 pt-8 pb-6 border-b border-neutral-100 dark:border-neutral-800">
+             <div className="flex items-center justify-between mb-2">
+                <h3 className="text-xl font-black tracking-tight">{isEdit ? 'Modify Subscriber' : 'Provision Subscriber'}</h3>
+                <button type="button" onClick={onClose} className="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"><CloseIcon className="w-5 h-5 text-neutral-400" /></button>
+             </div>
+             <p className="text-[10px] font-black uppercase text-neutral-400 tracking-widest">Global Identity & Runtime Pipeline Settings</p>
           </div>
 
-          {!isEdit && (
-            <Field label="UUID">
-              <div className="flex gap-2">
-                <input value={form.uuid} onChange={e => setForm({...form, uuid: e.target.value})} className="input flex-1 font-mono text-xs" placeholder="Auto-generate if empty" />
-                <button type="button" onClick={genUuid} className="btn-secondary shrink-0"><RefreshCw className="w-4 h-4" /></button>
+          <div className="flex bg-neutral-50/50 dark:bg-neutral-900/50 border-b border-neutral-100 dark:border-neutral-800">
+             <button type="button" onClick={() => setActiveTab('basic')} className={tabClass('basic')}>Basic Identity</button>
+             <button type="button" onClick={() => setActiveTab('limits')} className={tabClass('limits')}>Quotas & Limits</button>
+             <button type="button" onClick={() => setActiveTab('routing')} className={tabClass('routing')}>Advanced Routing</button>
+          </div>
+
+          <div className="p-8 max-h-[60vh] overflow-y-auto custom-scrollbar">
+            {error && <div className="mb-6 p-4 rounded-2xl bg-danger/10 text-danger text-[11px] font-bold border border-danger/20">{error}</div>}
+
+            {activeTab === 'basic' && (
+              <div className="space-y-6 animate-in slide-in-from-right-2">
+                 <div className="grid grid-cols-2 gap-6">
+                    <UserPropField label="Display Name" icon={UserIcon}><input value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="input font-bold" placeholder="e.g. John Doe" required /></UserPropField>
+                    <UserPropField label="Email Address" icon={MailIcon}><input value={form.email} onChange={e => setForm({...form, email: e.target.value})} className="input" placeholder="Optional identifier" /></UserPropField>
+                 </div>
+                 {!isEdit && (
+                    <UserPropField label="Subscriber UUID (Primary Key)" icon={FingerprintIcon}>
+                        <div className="flex gap-2">
+                           <input value={form.uuid} onChange={e => setForm({...form, uuid: e.target.value})} className="input flex-1 font-mono text-xs" placeholder="Auto-gen on empty" />
+                           <button type="button" onClick={genUuid} className="btn-secondary h-11 w-11 rounded-2xl"><RefreshIcon className="w-4 h-4" /></button>
+                        </div>
+                    </UserPropField>
+                 )}
+                 <div className="grid grid-cols-2 gap-6">
+                    <UserPropField label="Engine Mode" icon={CpuIcon}>
+                        <select value={form.mode} onChange={e => setForm({...form, mode: e.target.value})} className="input font-bold">
+                           {MODES.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                        </select>
+                    </UserPropField>
+                    <UserPropField label="Evasion / Obfs" icon={ShieldIcon}>
+                        <select value={form.obfs} onChange={e => setForm({...form, obfs: e.target.value})} className="input">
+                           {OBFS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                        </select>
+                    </UserPropField>
+                 </div>
+                 <UserPropField label="Subscriber Note" icon={InfoIcon}><textarea value={form.note} onChange={e => setForm({...form, note: e.target.value})} className="input h-20 text-xs py-3" placeholder="Admin remarks..." /></UserPropField>
               </div>
-            </Field>
-          )}
+            )}
 
-          <div className="grid grid-cols-3 gap-4">
-            <Field label="Max conns"><input type="number" value={form.max_connections} onChange={e => setForm({...form, max_connections: parseInt(e.target.value) || 0})} className="input" min="0" /></Field>
-            <Field label="Data (GB)"><input type="number" value={form.data_limit_gb} onChange={e => setForm({...form, data_limit_gb: parseInt(e.target.value) || 0})} className="input" min="0" /></Field>
-            <Field label="Speed (KB/s)"><input type="number" value={form.bandwidth_limit} onChange={e => setForm({...form, bandwidth_limit: parseInt(e.target.value) || 0})} className="input" min="0" /></Field>
+            {activeTab === 'limits' && (
+              <div className="space-y-6 animate-in slide-in-from-right-2">
+                 <div className="grid grid-cols-2 gap-6">
+                    <UserPropField label="Max Concurrency" icon={ActivityIcon}><input type="number" value={form.max_connections} onChange={e => setForm({...form, max_connections: parseInt(e.target.value) || 0})} className="input font-bold" min="0" /></UserPropField>
+                    <UserPropField label="IP Session Limit" icon={GlobeIcon}><input type="number" value={form.max_ips} onChange={e => setForm({...form, max_ips: parseInt(e.target.value) || 0})} className="input font-bold" min="0" /></UserPropField>
+                 </div>
+                 <div className="grid grid-cols-2 gap-6">
+                    <UserPropField label="Traffic Quota (GB)" icon={DatabaseIcon}><input type="number" value={form.data_limit_gb} onChange={e => setForm({...form, data_limit_gb: parseInt(e.target.value) || 0})} className="input font-bold" min="0" /></UserPropField>
+                    <UserPropField label="Bandwidth Limit" icon={GaugeIcon}>
+                        <div className="flex gap-1.5">
+                            <input type="number" value={bandwidthUI.value} onChange={e => updateBandwidth(e.target.value, bandwidthUI.unit)} className="input flex-1 font-bold" min="0" placeholder="0 = Unlimited" />
+                            <select value={bandwidthUI.unit} onChange={e => updateBandwidth(bandwidthUI.value, e.target.value)} className="input w-20 py-1 px-2 text-[10px] font-black uppercase">
+                                <option value="KB">KB/s</option>
+                                <option value="MB">MB/s</option>
+                                <option value="GB">GB/s</option>
+                            </select>
+                        </div>
+                    </UserPropField>
+                 </div>
+                 <div className="grid grid-cols-2 gap-6">
+                    <UserPropField label="Expiration Date" icon={CalendarIcon}><input type="datetime-local" value={form.expire_at ? form.expire_at.substring(0, 16) : ''} onChange={e => setForm({...form, expire_at: e.target.value ? new Date(e.target.value).toISOString() : ''})} className="input text-xs" /></UserPropField>
+                    <UserPropField label="Connection Pool" icon={ActivityIcon}><input type="number" value={form.pool_size} onChange={e => setForm({...form, pool_size: parseInt(e.target.value) || 4})} className="input" min="1" max="16" /></UserPropField>
+                 </div>
+                 <UserPropField label="Bind Interface / IP" icon={LinkIcon}><input value={form.bind_ip} onChange={e => setForm({...form, bind_ip: e.target.value})} className="input font-mono text-xs" placeholder="Default out interface if empty" /></UserPropField>
+              </div>
+            )}
+
+            {activeTab === 'routing' && (
+              <div className="space-y-6 animate-in slide-in-from-right-2">
+                 <UserPropField label="Cert Pin (SHA-256 Hex)" icon={LockIcon}>
+                    <div className="flex gap-2">
+                        <input value={form.cert_pin} onChange={e => setForm({...form, cert_pin: e.target.value})} className="input flex-1 font-mono text-[9px]" placeholder="64-char fingerprint" />
+                        <button type="button" onClick={fetchPin} title="Fetch Current Server Pin" className="btn-secondary h-11 px-3 rounded-2xl flex items-center justify-center shrink-0">
+                           <ZapIcon className="w-4 h-4 text-yellow-500" />
+                        </button>
+                    </div>
+                 </UserPropField>
+                 <div className="grid grid-cols-2 gap-6">
+                    <AdvancedSetting label="Bypass Domains" sub="Intranet/Local routes."><input value={form.bypass_domains} onChange={e => setForm({...form, bypass_domains: e.target.value})} className="input text-xs" /></AdvancedSetting>
+                    <AdvancedSetting label="Bypass IPs (CIDR)" sub="Address ranges skipped."><input value={form.bypass_ips} onChange={e => setForm({...form, bypass_ips: e.target.value})} className="input text-xs" /></AdvancedSetting>
+                 </div>
+                 <div className="grid grid-cols-2 gap-6">
+                    <AdvancedSetting label="GeoIP Data Path" sub="Relative to core binary."><input value={form.geoip_path} onChange={e => setForm({...form, geoip_path: e.target.value})} className="input text-xs" /></AdvancedSetting>
+                    <AdvancedSetting label="GeoSite Data Path" sub="V2Ray directory location."><input value={form.geosite_path} onChange={e => setForm({...form, geosite_path: e.target.value})} className="input text-xs" /></AdvancedSetting>
+                 </div>
+                 <AdvancedSetting label="Direct Route Tags" sub="Forced outbound bypass via direct.">
+                    <div className="flex flex-wrap gap-1.5 mb-2">
+                        {ROUTE_CATEGORIES.map(cat => (
+                            <button
+                                key={cat}
+                                type="button"
+                                onClick={() => toggleCategory(cat)}
+                                className={clsx(
+                                    "px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest border transition-all",
+                                    form.direct_route.includes(cat) 
+                                        ? "bg-neutral-900 border-neutral-900 text-white dark:bg-white dark:text-neutral-900" 
+                                        : "bg-neutral-50 dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 text-neutral-400"
+                                )}
+                            >
+                                {cat.replace('category-', '')}
+                            </button>
+                        ))}
+                    </div>
+                    <input value={form.direct_route} onChange={e => setForm({...form, direct_route: e.target.value})} className="input text-xs" placeholder="Comma separated categories" />
+                 </AdvancedSetting>
+              </div>
+            )}
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
-            <Field label="Expiry">
-              <input type="datetime-local" value={form.expire_at ? form.expire_at.substring(0, 16) : ''} onChange={e => setForm({...form, expire_at: e.target.value ? new Date(e.target.value).toISOString() : ''})} className="input text-xs" />
-            </Field>
-            <Field label="Mode">
-              <select value={form.mode} onChange={e => setForm({...form, mode: e.target.value})} className="input">
-                {MODES.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-              </select>
-            </Field>
-            <Field label="Obfuscation">
-              <select value={form.obfs} onChange={e => setForm({...form, obfs: e.target.value})} className="input">
-                {OBFS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
-            </Field>
+          <div className="p-8 border-t border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/50 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                 <span className="text-[10px] font-black uppercase text-neutral-400">Status</span>
+                 <button type="button" onClick={() => setForm(f => ({ ...f, enabled: !f.enabled }))} className={clsx('w-10 h-6 shrink-0 rounded-full relative transition-colors', form.enabled ? 'bg-success' : 'bg-neutral-300 dark:bg-neutral-600')}>
+                    <span className={clsx('absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-transform', form.enabled ? 'left-5' : 'left-1')} />
+                 </button>
+              </div>
+              <div className="flex gap-3">
+                 <button type="button" onClick={onClose} className="btn-secondary px-6 rounded-2xl h-11 text-xs font-bold border-neutral-200">Cancel</button>
+                 <button type="submit" disabled={loading} className="btn-primary px-10 rounded-2xl h-11 text-xs font-black shadow-apple-lg min-w-[140px]">
+                    {loading ? <LoaderIcon className="w-4 h-4 animate-spin mx-auto" /> : isEdit ? 'Save Changes' : 'Create Subscriber'}
+                 </button>
+              </div>
           </div>
-
-          {/* Enable toggle */}
-          <div className="flex items-center justify-between py-3 px-4 rounded-xl bg-neutral-50 dark:bg-neutral-800">
-            <span className="text-sm font-medium">Enabled</span>
-            <button
-              type="button"
-              onClick={() => setForm(f => ({ ...f, enabled: !f.enabled }))}
-              className={clsx('w-10 h-6 rounded-full relative transition-colors', form.enabled ? 'bg-success' : 'bg-neutral-300 dark:bg-neutral-600')}
-            >
-              <span className={clsx('absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-transform', form.enabled ? 'left-5' : 'left-1')} />
-            </button>
-          </div>
-
-          <button type="submit" disabled={loading} className="btn-primary w-full h-10 mt-2">
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : isEdit ? 'Save changes' : 'Create user'}
-          </button>
         </form>
       </div>
     </div>
   );
 }
 
-function Field({ label, children }) {
+function UserPropField({ label, icon: Icon, children }) {
   return (
-    <div>
-      <label className="block text-xs font-medium text-neutral-400 mb-1.5 ml-0.5">{label}</label>
+    <div className="space-y-1.5 flex-1">
+      <div className="flex items-center gap-1.5 ml-1">
+         {Icon && <Icon className="w-3 h-3 text-neutral-400" />}
+         <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">{label}</label>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function AdvancedSetting({ label, sub, children }) {
+  return (
+    <div className="space-y-1.5 flex-1">
+      <div className="ml-1">
+        <label className="text-[10px] font-black text-neutral-900 dark:text-white uppercase tracking-widest block">{label}</label>
+        <p className="text-[9px] text-neutral-400 font-bold uppercase tracking-tight">{sub}</p>
+      </div>
       {children}
     </div>
   );
@@ -326,7 +493,6 @@ function ConfigModal({ user, onClose, notify }) {
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(null);
 
-
   const reloadConfig = () => {
     setLoading(true);
     usersApi.getConfig(user.id)
@@ -335,10 +501,7 @@ function ConfigModal({ user, onClose, notify }) {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => {
-    reloadConfig();
-    // eslint-disable-next-line
-  }, [user.id]);
+  useEffect(() => { reloadConfig(); }, [user.id]);
 
   const copy = (text, type) => {
     navigator.clipboard.writeText(text);
@@ -348,94 +511,93 @@ function ConfigModal({ user, onClose, notify }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/30 dark:bg-black/50" onClick={onClose} />
-      <div className="relative w-full max-w-lg bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-6 animate-in">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h3 className="text-base font-bold">Client Configuration</h3>
-            <p className="text-xs text-neutral-500 mt-0.5">{user.name}</p>
-          </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400"><X className="w-4 h-4" /></button>
-        </div>
-
-        {/* Regenerate UUID Button */}
-        <div className="flex justify-end mb-4">
-          <button
-            className="btn-secondary text-xs flex items-center gap-1"
-            onClick={async () => {
-              if (!window.confirm('Are you sure you want to regenerate the UUID?')) return;
-              try {
-                await usersApi.regenerateUuid(user.id);
-                notify('UUID regenerated');
-                reloadConfig();
-              } catch (e) {
-                notify(e.message, false);
-              }
-            }}
-          >
-            <Fingerprint className="w-4 h-4" /> Regenerate UUID
-          </button>
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-xl bg-white dark:bg-neutral-900 rounded-[2.5rem] shadow-apple-2xl border border-neutral-100 dark:border-neutral-800 p-8 pt-10 animate-in zoom-in-95 duration-200">
+        
+        <div className="flex flex-col items-center text-center mb-8">
+           <div className="w-16 h-16 rounded-[1.5rem] bg-neutral-900 dark:bg-white flex items-center justify-center mb-4 shadow-apple-lg">
+              <ShareIcon className="w-8 h-8 text-white dark:text-neutral-900" strokeWidth={2.5} />
+           </div>
+           <h3 className="text-xl font-black tracking-tight">Access Blueprint</h3>
+           <p className="text-xs text-neutral-500 mt-1 font-medium">{user.name} ({user.email || 'No Linked Email'})</p>
         </div>
 
         {loading ? (
-          <div className="py-12 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-neutral-300" /></div>
+          <div className="py-24 flex justify-center"><LoaderIcon className="w-8 h-8 animate-spin text-neutral-200" /></div>
         ) : (
           <div className="space-y-6">
-            {/* JSON Output */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs font-medium text-neutral-400 px-1">
-                <span className="flex items-center gap-1.5"><FileJson className="w-3.5 h-3.5" /> Client JSON</span>
-                <button 
-                  onClick={() => copy(JSON.stringify(data.json, null, 2), 'json')} 
-                  className="text-primary hover:underline flex items-center gap-1"
-                >
-                  {copied === 'json' ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                  {copied === 'json' ? 'Copied' : 'Copy'}
-                </button>
-              </div>
-              <pre className="bg-neutral-50 dark:bg-neutral-950 p-4 rounded-xl text-[11px] font-mono text-neutral-700 dark:text-neutral-300 overflow-x-auto max-h-48 border border-neutral-100 dark:border-neutral-800">
-                {JSON.stringify(data.json, null, 2)}
-              </pre>
-            </div>
+            <ConfigSection 
+              icon={JsonIcon} 
+              label="Subscriber JSON Bundle" 
+              value={JSON.stringify(data.json, null, 2)} 
+              isPre 
+              onCopy={() => copy(JSON.stringify(data.json, null, 2), 'json')}
+              copied={copied === 'json'}
+            />
+            <ConfigSection 
+              icon={LinkIcon} 
+              label="Universal Subscription Endpoint" 
+              value={data.url} 
+              onCopy={() => copy(data.url, 'url')}
+              copied={copied === 'url'}
+            />
+            <ConfigSection 
+              icon={ZapIcon} 
+              label="Hivoid Protocol URI (Fast Connect)" 
+              value={data.protocol} 
+              onCopy={() => copy(data.protocol, 'protocol')}
+              highlight 
+              copied={copied === 'protocol'}
+            />
 
-            {/* URL Output */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs font-medium text-neutral-400 px-1">
-                <span className="flex items-center gap-1.5"><Link className="w-3.5 h-3.5" /> Subscription URL</span>
-                <button 
-                  onClick={() => copy(data.url, 'url')} 
-                  className="text-primary hover:underline flex items-center gap-1"
-                >
-                  {copied === 'url' ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                  {copied === 'url' ? 'Copied' : 'Copy'}
-                </button>
-              </div>
-              <div className="flex items-center gap-2 bg-neutral-50 dark:bg-neutral-950 p-3 rounded-xl border border-neutral-100 dark:border-neutral-800">
-                <code className="text-[11px] font-mono text-neutral-500 truncate flex-1">{data.url}</code>
-              </div>
-            </div>
-
-            {/* Protocol Link Output */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs font-medium text-neutral-400 px-1">
-                <span className="flex items-center gap-1.5"><Zap className="w-3.5 h-3.5 text-yellow-500" /> Protocol Link (One-Click)</span>
-                <button 
-                  onClick={() => copy(data.protocol, 'protocol')} 
-                  className="text-primary hover:underline flex items-center gap-1"
-                >
-                  {copied === 'protocol' ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                  {copied === 'protocol' ? 'Copied' : 'Copy'}
-                </button>
-              </div>
-              <div className="flex items-center gap-2 bg-neutral-50 dark:bg-neutral-950 p-3 rounded-xl border border-neutral-100 dark:border-neutral-800">
-                <code className="text-[11px] font-mono text-neutral-500 truncate flex-1">{data.protocol}</code>
-              </div>
+            <div className="grid grid-cols-2 gap-4 mt-8 pt-4">
+               <button onClick={reloadConfig} className="btn-secondary h-12 rounded-2xl text-[11px] font-black uppercase">
+                  <RefreshIcon className="w-4 h-4 mr-2" /> Sync Current
+               </button>
+               <button 
+                onClick={async () => {
+                  if (!window.confirm('IRREVERSABLE: Regenerate Identity UUID?')) return;
+                  try {
+                    await usersApi.regenerateUuid(user.id);
+                    notify('Identity regenerated');
+                    reloadConfig();
+                  } catch (e) { notify(e.message, false); }
+                }}
+                className="btn bg-danger/5 hover:bg-danger/10 text-danger border border-danger/20 h-12 rounded-2xl text-[11px] font-black uppercase"
+               >
+                  <FingerprintIcon className="w-4 h-4 mr-2" /> Regen UUID
+               </button>
             </div>
           </div>
         )}
-
-        <button onClick={onClose} className="btn-secondary w-full h-10 mt-6">Close</button>
+        <button onClick={onClose} className="btn-primary w-full h-12 mt-6 rounded-2xl font-black shadow-apple-lg">Done</button>
       </div>
+    </div>
+  );
+}
+
+function ConfigSection({ icon: Icon, label, value, isPre, onCopy, copied, highlight }) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between px-1">
+        <div className="flex items-center gap-2">
+           <Icon className={clsx("w-3.5 h-3.5", highlight ? "text-yellow-500" : "text-neutral-400")} />
+           <span className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">{label}</span>
+        </div>
+        <button onClick={onCopy} className="text-primary hover:underline text-[10px] font-black uppercase flex items-center gap-1.5">
+           {copied ? <CheckIcon className="w-3 h-3" /> : <CopyIcon className="w-3 h-3" />}
+           {copied ? 'Copied' : 'Copy'}
+        </button>
+      </div>
+      {isPre ? (
+        <pre className="bg-neutral-50 dark:bg-neutral-950 p-4 rounded-2xl text-[10px] font-mono text-neutral-600 dark:text-neutral-400 overflow-x-auto max-h-32 border border-neutral-100 dark:border-neutral-800">
+           {value}
+        </pre>
+      ) : (
+        <div className={clsx("bg-neutral-50 dark:bg-neutral-950 p-4 rounded-2xl text-[10px] font-mono text-neutral-400 border border-neutral-100 dark:border-neutral-800 truncate", highlight && "border-yellow-500/20")}>
+           {value}
+        </div>
+      )}
     </div>
   );
 }

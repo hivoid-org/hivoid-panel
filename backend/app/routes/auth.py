@@ -14,6 +14,8 @@ from app.schemas import (
     ChangePasswordRequest,
     ResetPasswordRequest,
     MessageResponse,
+    TOTPSetupResponse,
+    TOTPVerifyRequest,
 )
 from app.auth import (
     verify_password,
@@ -22,6 +24,10 @@ from app.auth import (
     get_current_admin,
 )
 from app.config import settings
+import pyotp
+import qrcode
+import io
+import base64
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 limiter = Limiter(key_func=get_remote_address)
@@ -37,8 +43,69 @@ def login(request: Request, body: LoginRequest, db: Session = Depends(get_db)):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid username or password",
         )
+    
+    if admin.totp_enabled:
+        if not body.totp_code:
+            return TokenResponse(totp_required=True)
+        
+        totp = pyotp.TOTP(admin.totp_secret)
+        if not totp.verify(body.totp_code):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid 2FA code",
+            )
+
     token = create_access_token(data={"sub": admin.username})
     return TokenResponse(access_token=token)
+
+
+@router.get("/totp/setup", response_model=TOTPSetupResponse)
+def totp_setup(admin: Admin = Depends(get_current_admin)):
+    """Generate TOTP secret and QR code for setup."""
+    secret = pyotp.random_base32()
+    uri = pyotp.totp.TOTP(secret).provisioning_uri(
+        name=admin.username, 
+        issuer_name="HiVoid Panel"
+    )
+    
+    img = qrcode.make(uri)
+    buffered = io.BytesIO()
+    img.save(buffered) # type: ignore
+    img_str = base64.b64encode(buffered.getvalue()).decode()
+    
+    return TOTPSetupResponse(
+        secret=secret,
+        qr_code=f"data:image/png;base64,{img_str}"
+    )
+
+
+@router.post("/totp/verify", response_model=MessageResponse)
+def totp_verify(
+    body: TOTPVerifyRequest,
+    admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """Verify and enable TOTP for the account."""
+    totp = pyotp.TOTP(body.secret)
+    if not totp.verify(body.token):
+        raise HTTPException(status_code=400, detail="Invalid verification code")
+    
+    admin.totp_secret = body.secret
+    admin.totp_enabled = True
+    db.commit()
+    return MessageResponse(message="Two-factor authentication enabled successfully")
+
+
+@router.post("/totp/disable", response_model=MessageResponse)
+def totp_disable(
+    admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """Disable TOTP for the account."""
+    admin.totp_enabled = False
+    admin.totp_secret = None
+    db.commit()
+    return MessageResponse(message="Two-factor authentication disabled")
 
 
 @router.post("/change-password", response_model=MessageResponse)
@@ -94,4 +161,7 @@ def reset_password(
 @router.get("/me")
 def me(admin: Admin = Depends(get_current_admin)):
     """Return current admin info (validates the token)."""
-    return {"username": admin.username}
+    return {
+        "username": admin.username,
+        "totp_enabled": admin.totp_enabled
+    }

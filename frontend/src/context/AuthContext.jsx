@@ -30,12 +30,16 @@ export function AuthProvider({ children }) {
     }
   }, [token]);
 
-  const login = useCallback(async (username, password) => {
-    const data = await authApi.login(username, password);
-    localStorage.setItem('hivoid_token', data.access_token);
-    setToken(data.access_token);
-    const me = await authApi.me();
-    setAdmin(me);
+  const login = useCallback(async (username, password, totp_code) => {
+    const data = await authApi.login(username, password, totp_code);
+    if (data.totp_required) return data;
+    
+    if (data.access_token) {
+        localStorage.setItem('hivoid_token', data.access_token);
+        setToken(data.access_token);
+        const me = await authApi.me();
+        setAdmin(me);
+    }
     return data;
   }, []);
 

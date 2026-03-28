@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 ###############################################################################
-#  HiVoid Panel — Pro Global Installer (Ultimate Stable Version)
+#  HiVoid Panel — Global Installer (Stable Version)
 ###############################################################################
 
 set -euo pipefail
