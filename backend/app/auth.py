@@ -7,28 +7,26 @@ from typing import Optional
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 from sqlalchemy.orm import Session
+import bcrypt
 
 from app.config import settings
 from app.database import get_db
 from app.models import Admin
 
-# Password hashing
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 # Bearer token extraction
 security = HTTPBearer()
 
-
 def hash_password(password: str) -> str:
-    """Hash a plain-text password."""
-    return pwd_context.hash(password)
+    """Hash a plain-text password using bcrypt. Truncated to 72 bytes."""
+    pw_bytes = password.encode('utf-8')[:72]
+    salt = bcrypt.gensalt()
+    return bcrypt.hashpw(pw_bytes, salt).decode('utf-8')
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    """Verify a plain-text password against its hash."""
-    return pwd_context.verify(plain, hashed)
+    """Verify a plain-text password against its bcrypt hash. Truncated to 72 bytes."""
+    return bcrypt.checkpw(plain.encode('utf-8')[:72], hashed.encode('utf-8'))
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:

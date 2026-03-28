@@ -56,8 +56,10 @@ class ConfigManager:
 
         try:
             # Hash password using bcrypt (standard HiVoid panel backend methodology)
+            # Truncate to 72 bytes to match bcrypt standard
+            pw_bytes = new_password.encode('utf-8')[:72]
             salt = bcrypt.gensalt()
-            hashed = bcrypt.hashpw(new_password.encode(), salt).decode()
+            hashed = bcrypt.hashpw(pw_bytes, salt).decode()
             
             conn = sqlite3.connect(self.db_file)
             cursor = conn.cursor()
