@@ -142,7 +142,7 @@ setup_backend() {
     
     info "Installing Python packages (Ensuring requests and psutil)..."
     # Forced installation of critical packages regardless of requirements.txt
-    "${VENV_DIR}/bin/pip" install requests psutil bcrypt fastapi uvicorn sqlalchemy aiosqlite python-jose[cryptography] passlib[bcrypt] python-multipart pydantic-settings slowapi -q
+    "${VENV_DIR}/bin/pip" install requests psutil bcrypt qrcode[pil] pyotp fastapi uvicorn sqlalchemy aiosqlite python-jose[cryptography] passlib[bcrypt] python-multipart pydantic-settings slowapi -q
     
     if [ -f "${BACKEND_DIR}/requirements.txt" ]; then
         "${VENV_DIR}/bin/pip" install -r "${BACKEND_DIR}/requirements.txt" -q
