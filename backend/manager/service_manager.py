@@ -126,9 +126,9 @@ class HiVoidManager:
         """Restart the backend panel service via systemctl."""
         return os.system("systemctl restart hivoid-panel-backend") == 0
 
-    def delete_service(self) -> bool:
+    def uninstall_service(self) -> bool:
         """Fully remove HiVoid Core, Panel, Services, and CLI. This is a total purge."""
-        logger.warning("Initiating full system purge...")
+        logger.warning("Initiating full system removal...")
         
         # 1. Stop and disable services
         services = ["hivoid-panel-backend", "hivoid-server"]
@@ -198,10 +198,81 @@ class HiVoidManager:
         if success:
             if not self.refresh_cli_wrapper():
                 return False
-            logger.info("Panel code updated, restarting panel service...")
-            return self.restart_panel()
-            
         return False
+
+    def view_logs(self, service: str = "core") -> None:
+        """Stream live logs from systemd journal."""
+        svc_name = "hivoid-server" if service == "core" else "hivoid-panel-backend"
+        print(f"\n\033[1;36mStreaming logs for {svc_name} (CTRL+C to exit)...\033[0m")
+        os.system(f"journalctl -u {svc_name} -f -n 50")
+
+    def create_backup(self) -> str:
+        """Create a timestamped backup of config and database."""
+        from datetime import datetime
+        import zipfile
+        import shutil
+
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        ensure_dir(self.backup_dir)
+        backup_path = self.backup_dir / f"hivoid_backup_{timestamp}.zip"
+        
+        try:
+            with zipfile.ZipFile(str(backup_path), 'w') as zipf:
+                if self.config_path.exists():
+                    zipf.write(str(self.config_path), arcname="server.json")
+                if self.db_path.exists():
+                    zipf.write(str(self.db_path), arcname="hivoid_panel.db")
+            return str(backup_path)
+        except Exception as e:
+            logger.error(f"Backup failed: {e}")
+            return ""
+
+    def restore_backup(self, backup_file: str) -> bool:
+        """Restore config and database from a backup zip."""
+        import zipfile
+        import shutil
+
+        path = Path(backup_file)
+        if not path.exists():
+            return False
+
+        try:
+            with zipfile.ZipFile(str(path), 'r') as zipf:
+                tmp_extract = Path("/tmp/hivoid_restore")
+                ensure_dir(tmp_extract)
+                zipf.extractall(str(tmp_extract))
+                
+                if (tmp_extract / "server.json").exists():
+                    shutil.copy(str(tmp_extract / "server.json"), str(self.config_path))
+                if (tmp_extract / "hivoid_panel.db").exists():
+                    shutil.copy(str(tmp_extract / "hivoid_panel.db"), str(self.db_path))
+                    
+                shutil.rmtree(str(tmp_extract))
+            
+            self.restart_service()
+            self.restart_panel()
+            return True
+        except Exception as e:
+            logger.error(f"Restore failed: {e}")
+            return False
+
+    def toggle_autostart(self, enable: bool = True) -> bool:
+        """Enable or disable services from starting on boot."""
+        action = "enable" if enable else "disable"
+        services = ["hivoid-panel-backend", "hivoid-server"]
+        for svc in services:
+            os.system(f"systemctl {action} {svc} > /dev/null 2>&1")
+        return True
+
+    def get_system_stats(self) -> Dict:
+        """Fetch system-wide CPU and RAM stats."""
+        import psutil
+        return {
+            "cpu_percent": psutil.cpu_percent(),
+            "ram_percent": psutil.virtual_memory().percent,
+            "disk_percent": psutil.disk_usage('/').percent
+        }
+
 
 # Usage Example:
 # manager = HiVoidManager()

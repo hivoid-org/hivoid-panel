@@ -23,7 +23,7 @@ import {
   Terminal as TerminalIcon, 
   Filter as FilterIcon, 
   Binary as BinaryIcon,
-  // LockIcon as LockIcon,
+  Download as DownloadIcon,
 } from 'lucide-react';
 import { protocol, users as usersApi, settings as settingsApi } from '../api';
 import clsx from 'clsx';
@@ -201,8 +201,8 @@ export default function ProtocolPage() {
       <div className="flex flex-col md:flex-row gap-6">
         {/* Navigation Sidebar */}
         <div className="w-full md:w-64 space-y-2 shrink-0">
-          <TabNav active={activeTab === 'core'} onClick={() => setActiveTab('core')} icon={CpuIcon} label="Core Runtime" />
-          <TabNav active={activeTab === 'security'} onClick={() => setActiveTab('security')} icon={LockIcon} label="Security & TLS" />
+          <TabNav active={activeTab === 'core'} onClick={() => setActiveTab('core')} icon={CpuIcon} label="Core Runtime KIR" />
+          <TabNav active={activeTab === 'security'} onClick={() => setActiveTab('security')} icon={LockIcon} label="Security & Cryptography" />
           <TabNav active={activeTab === 'feats'} onClick={() => setActiveTab('feats')} icon={ZapIcon} label="Capabilities" />
           {status?.geodata_installed && (
             <>
@@ -214,7 +214,7 @@ export default function ProtocolPage() {
           <div className="pt-6">
             <button onClick={saveConfig} disabled={savingConfig} className="btn-primary w-full h-12 rounded-2xl shadow-apple-lg text-sm font-black">
                 {savingConfig ? <LoaderIcon className="w-5 h-5 animate-spin" /> : <SaveIcon className="w-5 h-5 mr-1" />}
-                Persist Config
+                Save Config
             </button>
           </div>
         </div>
@@ -276,14 +276,34 @@ export default function ProtocolPage() {
                         {actionLoading === 'cert' ? <LoaderIcon className="w-4 h-4 animate-spin" /> : <RefreshCwIcon className="w-4 h-4 mr-2" />} Regenerate Keys
                      </button>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <SettingRow label="GeoIP Database Path" sub="Standard dat file for IP mapping.">
-                       <input value={config.geoip_path} onChange={e => setConfig({...config, geoip_path: e.target.value})} className="input text-xs font-mono" />
-                    </SettingRow>
-                    <SettingRow label="GeoSite Database Path" sub="Reference for domain categorization.">
-                       <input value={config.geosite_path} onChange={e => setConfig({...config, geosite_path: e.target.value})} className="input text-xs font-mono" />
-                    </SettingRow>
+                  <div className="p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 flex items-center justify-between">
+                     <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-white dark:bg-black flex items-center justify-center shadow-apple-sm">
+                           <GlobeIcon className="w-5 h-5 text-primary" />
+                        </div>
+                        <div>
+                           <p className="text-sm font-bold">GeoData Dependencies</p>
+                           <p className="text-[10px] text-neutral-400 mt-0.5">{status?.geodata_installed ? 'Dat files located in local path.' : 'Dat files are missing from system.'}</p>
+                        </div>
+                     </div>
+                     <button onClick={() => executeAction('geodata')} disabled={!!actionLoading} className={clsx("btn h-10 text-xs px-4 rounded-xl", status?.geodata_installed ? "btn-secondary" : "btn-primary")}>
+                        {actionLoading === 'geodata' ? <LoaderIcon className="w-4 h-4 animate-spin" /> : (status?.geodata_installed ? <RefreshCwIcon className="w-4 h-4 mr-2" /> : <DownloadIcon className="w-4 h-4 mr-2" />)} {status?.geodata_installed ? 'Update GeoData' : 'Install GeoData'}
+                     </button>
                   </div>
+                  {status?.geodata_installed ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <SettingRow label="GeoIP Database Path" sub="Standard dat file for IP mapping.">
+                           <input value={config.geoip_path} onChange={e => setConfig({...config, geoip_path: e.target.value})} className="input text-xs font-mono" />
+                        </SettingRow>
+                        <SettingRow label="GeoSite Database Path" sub="Reference for domain categorization.">
+                           <input value={config.geosite_path} onChange={e => setConfig({...config, geosite_path: e.target.value})} className="input text-xs font-mono" />
+                        </SettingRow>
+                      </div>
+                  ) : (
+                      <div className="p-4 rounded-2xl bg-danger/5 border border-danger/10 text-center">
+                          <p className="text-xs font-bold text-danger">Advanced routing (ACLM) requires GeoIP/GeoSite data. Click Install above to enable features.</p>
+                      </div>
+                  )}
                </div>
             </div>
           )}

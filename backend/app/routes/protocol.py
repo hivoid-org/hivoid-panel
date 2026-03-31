@@ -235,9 +235,8 @@ def protocol_status(
     try:
         binary = Path(settings.HIVOID_BINARY_PATH)
         if binary.exists():
-            res = subprocess.run([str(binary), "--version"], capture_output=True, text=True, timeout=2)
+            res = subprocess.run([str(binary), "version"], capture_output=True, text=True, timeout=2)
             if res.returncode == 0:
-                # Expecting something like "HiVoid Server v1.1.0" or just "1.1.0"
                 version_str = res.stdout.strip().split("\n")[0]
     except Exception:
         pass
