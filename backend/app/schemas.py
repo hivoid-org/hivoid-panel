@@ -62,6 +62,8 @@ class UserCreate(BaseModel):
     geosite_path: Optional[str] = ""
     direct_route: Optional[str] = ""
     cert_pin: Optional[str] = ""
+    blocked_hosts: Optional[str] = ""
+    blocked_tags: Optional[str] = ""
 
 
 class UserUpdate(BaseModel):
@@ -84,6 +86,8 @@ class UserUpdate(BaseModel):
     geosite_path: Optional[str] = None
     direct_route: Optional[str] = None
     cert_pin: Optional[str] = None
+    blocked_hosts: Optional[str] = None
+    blocked_tags: Optional[str] = None
 
 
 class UserResponse(BaseModel):
@@ -110,6 +114,8 @@ class UserResponse(BaseModel):
     geosite_path: str
     direct_route: str
     cert_pin: str
+    blocked_hosts: str
+    blocked_tags: str
     created_at: datetime
     updated_at: datetime
 

@@ -24,15 +24,15 @@ export default function DashboardPage() {
   const [cpuH, setCpuH] = useState([]);
   const [ramH, setRamH] = useState([]);
   const [userCount, setUserCount] = useState({ total: 0, active: 0 });
-  const [proto, setProto] = useState({ running: false, version: 'v1.1.0' });
+  const [proto, setProto] = useState({ running: false, version: `v${__APP_VERSION__}` });
   const [loading, setLoading] = useState(true);
   const [recentUsers, setRecentUsers] = useState([]);
 
   const fmtBytes = (b) => {
-    if (!b) return '0 B';
-    const k = 1024, s = ['B','KB','MB','GB','TB'];
-    const idx = Math.floor(Math.log(b) / Math.log(k));
-    return parseFloat((b / Math.pow(k, idx)).toFixed(1)) + ' ' + s[idx];
+    if (!b || b === 0) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(b) / Math.log(1024));
+    return parseFloat((b / Math.pow(1024, i)).toFixed(2)) + ' ' + units[i];
   };
 
   const fetch = useCallback(async () => {
@@ -85,7 +85,7 @@ export default function DashboardPage() {
                 : 'bg-danger/5 border-danger/20 text-danger'
             )}>
               <span className={clsx('w-2 h-2 rounded-full shadow-lg', proto.running ? 'bg-success animate-pulse' : 'bg-danger')} />
-              Core {proto.running ? 'Operational' : 'Offline'}
+              Core v{__APP_VERSION__} {proto.running ? 'Operational' : 'Offline'}
            </div>
         </div>
       </div>

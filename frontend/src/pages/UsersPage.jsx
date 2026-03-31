@@ -264,6 +264,8 @@ function UserModal({ user, onClose, onSaved }) {
     geosite_path: user?.geosite_path || './geosite.dat',
     direct_route: user?.direct_route || 'category-ads',
     cert_pin: user?.cert_pin || '',
+    blocked_hosts: user?.blocked_hosts || '',
+    blocked_tags: user?.blocked_tags || '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -440,6 +442,10 @@ function UserModal({ user, onClose, onSaved }) {
                     </div>
                     <input value={form.direct_route} onChange={e => setForm({...form, direct_route: e.target.value})} className="input text-xs" placeholder="Comma separated categories" />
                  </AdvancedSetting>
+                 <div className="grid grid-cols-2 gap-6">
+                    <AdvancedSetting label="Blocked Hosts" sub="Server-side domain blacklist."><input value={form.blocked_hosts} onChange={e => setForm({...form, blocked_hosts: e.target.value})} className="input text-xs font-mono" placeholder="x.com, ads.net" /></AdvancedSetting>
+                    <AdvancedSetting label="Blocked GeoTags" sub="Server-side GeoData blocking."><input value={form.blocked_tags} onChange={e => setForm({...form, blocked_tags: e.target.value})} className="input text-xs font-mono" placeholder="ir, category-ads" /></AdvancedSetting>
+                 </div>
               </div>
             )}
           </div>

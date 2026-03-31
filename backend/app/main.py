@@ -65,11 +65,18 @@ async def lifespan(app: FastAPI):
     yield
 
 
+import json
+try:
+    with open(Path(__file__).resolve().parent.parent.parent / "version.json") as f:
+        APP_VERSION = json.load(f)["version"]
+except Exception:
+    APP_VERSION = "v1.5.0"
+
 # ─── App ────────────────────────────────────────────────────────────────────
 app = FastAPI(
     title="HiVoid Panel",
     description="Management panel for HiVoid protocol server",
-    version="1.0.0",
+    version=APP_VERSION,
     docs_url="/api/docs",
     redoc_url="/api/redoc",
     lifespan=lifespan,

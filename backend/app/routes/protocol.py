@@ -98,71 +98,57 @@ def sync_server_config(db: Session) -> bool:
         user_list.append({
             "uuid": u.uuid,
             "email": u.email or "",
-            "enabled": u.enabled,
-            "max_connections": u.max_connections,
+            "enabled": True, # Only enabled users are in this list
+            "max_connections": u.max_connections or 0,
             "max_ips": u.max_ips or 0,
             "bind_ip": u.bind_ip or "",
-            "bandwidth_limit": u.bandwidth_limit,
+            "bandwidth_limit": u.bandwidth_limit or 0,
             "data_limit": u.data_limit_gb * 1073741824 if u.data_limit_gb else 0,
             "expire_at": u.expire_at or "",
             "bytes_in": u_bytes_in,
             "bytes_out": u_bytes_out,
             "mode": u.mode or "performance",
-            "obfs": u.obfs or "none"
+            "obfs": u.obfs or "none",
+            "blocked_hosts": [h.strip() for h in u.blocked_hosts.split(",") if h.strip()] if u.blocked_hosts else [],
+            "blocked_tags": [t.strip() for t in u.blocked_tags.split(",") if t.strip()] if u.blocked_tags else []
         })
 
-    # Load existing config for persistence
-    existing = {}
-    if config_path.exists():
+    # Load panel settings for global config defaults
+    s = db.query(PanelSettings).first()
+    panel_config = {}
+    if s and s.hivoid_config:
         try:
-            existing = json.loads(config_path.read_text())
-        except (json.JSONDecodeError, OSError):
-            pass
-
-    # Get global panel settings for server config
-    try:
-        s = db.query(PanelSettings).first()
-        if s and s.hivoid_config:
             panel_config = json.loads(s.hivoid_config)
-            if isinstance(panel_config, dict):
-                existing.update(panel_config)
-    except Exception:
-        pass
+            if not isinstance(panel_config, dict):
+                panel_config = {}
+        except Exception:
+            panel_config = {}
 
-    # Safely extract existing values (handle both Flat and Nested legacy formats)
-    old_server_block = existing.get("server", {}) if isinstance(existing.get("server"), dict) else {}
-    old_security_block = existing.get("security", {}) if isinstance(existing.get("security"), dict) else {}
-    old_features_block = existing.get("features", {}) if isinstance(existing.get("features"), dict) else {}
-
-    listen = existing.get("listen") or old_server_block.get("listen") or f":{existing.get('port', 4433)}"
-    mode = existing.get("mode") or old_server_block.get("mode") or "performance"
-    log_level = existing.get("log_level") or old_server_block.get("log_level") or "info"
-    
-    cert_file = existing.get("cert_file") or old_security_block.get("cert_file") or settings.CERT_FILE
-    key_file = existing.get("key_file") or old_security_block.get("key_file") or settings.KEY_FILE
-
-    # Core 1.1 structured format
+    # Build the new HiVoid Server 1.1 structured format
     config = {
         "server": {
-            "listen": listen,
-            "mode": mode.lower(),
-            "log_level": log_level
+            "listen": panel_config.get("listen") or f":{panel_config.get('port', 4433)}",
+            "mode": (panel_config.get("mode") or "performance").lower(),
+            "log_level": panel_config.get("log_level") or "info"
         },
         "security": {
-            "cert_file": cert_file,
-            "key_file": key_file
+            "cert_file": panel_config.get("cert_file") or str(Path(settings.CERT_FILE).resolve()),
+            "key_file": panel_config.get("key_file") or str(Path(settings.KEY_FILE).resolve())
         },
         "features": {
-            "hot_reload": bool(existing.get("hot_reload", old_features_block.get("hot_reload", True))),
-            "connection_tracking": bool(existing.get("connection_tracking", old_features_block.get("connection_tracking", True))),
-            "disconnect_expired": bool(existing.get("disconnect_expired", old_features_block.get("disconnect_expired", True)))
+            "hot_reload": bool(panel_config.get("hot_reload", True)),
+            "connection_tracking": bool(panel_config.get("connection_tracking", True)),
+            "disconnect_expired": bool(panel_config.get("disconnect_expired", True))
         },
-        "users": user_list,
-        "max_conns": int(existing.get("max_conns", 0)),
-        "allowed_hosts": [h.strip() for h in existing.get("allowed_hosts", []) if h.strip()] if isinstance(existing.get("allowed_hosts"), list) else [],
-        "blocked_hosts": [h.strip() for h in existing.get("blocked_hosts", []) if h.strip()] if isinstance(existing.get("blocked_hosts"), list) else [],
-        "anti_probe": bool(existing.get("anti_probe", True)),
-        "fallback_addr": existing.get("fallback_addr", "127.0.0.1:8080")
+        "max_conns": int(panel_config.get("max_conns", 1000)),
+        "anti_probe": bool(panel_config.get("anti_probe", True)),
+        "fallback_addr": panel_config.get("fallback_addr", "127.0.0.1:80"),
+        "geoip_path": panel_config.get("geoip_path") or "/opt/hivoid-panel/backend/data/geoip.dat",
+        "geosite_path": panel_config.get("geosite_path") or "/opt/hivoid-panel/backend/data/geosite.dat",
+        "allowed_hosts": panel_config.get("allowed_hosts") if isinstance(panel_config.get("allowed_hosts"), list) else [],
+        "blocked_hosts": panel_config.get("blocked_hosts") if isinstance(panel_config.get("blocked_hosts"), list) else [],
+        "blocked_tags": panel_config.get("blocked_tags") if isinstance(panel_config.get("blocked_tags"), list) else [],
+        "users": user_list
     }
 
     try:

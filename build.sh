@@ -16,8 +16,8 @@ FRONTEND_DIR="${PROJECT_ROOT}/frontend"
 BACKEND_DIR="${PROJECT_ROOT}/backend"
 TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
 
-if [[ -f "${FRONTEND_DIR}/package.json" ]]; then
-  PROJECT_VERSION=$(grep '"version":' "${FRONTEND_DIR}/package.json" | head -1 | cut -d'"' -f4)
+if [[ -f "${PROJECT_ROOT}/version.json" ]]; then
+  PROJECT_VERSION=$(grep '"version":' "${PROJECT_ROOT}/version.json" | head -1 | cut -d'"' -f4)
 else
   PROJECT_VERSION="unknown"
 fi

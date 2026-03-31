@@ -82,7 +82,6 @@ def user_count(
     db_in = sums[0] or 0
     db_out = sums[1] or 0
 
-    # Supplement with live usage
     total_in = db_in
     total_out = db_out
     
@@ -91,15 +90,15 @@ def user_count(
     if usage_path.exists():
         try:
             usage_data = json.loads(usage_path.read_text())
-            for u_usage in usage_data.get("users", []):
-                # Since User objects might not be updated yet, we prefer live data from file
-                # But wait, we want the TOTAL sum. The file has the CURRENT usage for all active users.
-                # Actually, the file usually matches the DB or is ahead.
-                # However, many users might NOT be in the file.
-                # For simplicity, we assume DB has historical + last sync, and file is most recent for active.
-                # A better way is to iterate all users and merge, but that's expensive.
-                # For the dashboard summary, let's just use the DB sum as baseline.
-                pass
+            live_map = {u["uuid"]: u for u in usage_data.get("users", [])}
+            
+            all_users = db.query(User.uuid, User.bytes_in, User.bytes_out).all()
+            total_in = 0
+            total_out = 0
+            for u in all_users:
+                live = live_map.get(u.uuid)
+                total_in += live.get("bytes_in", u.bytes_in) if live else u.bytes_in
+                total_out += live.get("bytes_out", u.bytes_out) if live else u.bytes_out
         except Exception:
             pass
 

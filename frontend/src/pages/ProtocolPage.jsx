@@ -65,6 +65,7 @@ export default function ProtocolPage() {
               max_conns: parsed.max_conns || 0,
               blocked_hosts: Array.isArray(parsed.blocked_hosts) ? parsed.blocked_hosts.join(", ") : '',
               allowed_hosts: Array.isArray(parsed.allowed_hosts) ? parsed.allowed_hosts.join(", ") : '',
+              blocked_tags: Array.isArray(parsed.blocked_tags) ? parsed.blocked_tags.join(", ") : '',
               geosite_path: parsed.geosite_path || './geosite.dat',
               geoip_path: parsed.geoip_path || './geoip.dat',
               bypass_ips: Array.isArray(parsed.bypass_ips) ? parsed.bypass_ips.join(", ") : '127.0.0.1/32, 192.168.1.0/24',
@@ -110,6 +111,7 @@ export default function ProtocolPage() {
             ...config,
             blocked_hosts: config.blocked_hosts.split(',').map(s=>s.trim()).filter(Boolean),
             allowed_hosts: config.allowed_hosts.split(',').map(s=>s.trim()).filter(Boolean),
+            blocked_tags: config.blocked_tags.split(',').map(s=>s.trim()).filter(Boolean),
             bypass_ips: config.bypass_ips.split(',').map(s=>s.trim()).filter(Boolean),
         };
         await settingsApi.update({ hivoid_config: JSON.stringify(payload) });
@@ -137,10 +139,10 @@ export default function ProtocolPage() {
         {/* Core Status Card */}
         <div className="card lg:w-1/3 p-8 flex flex-col items-center text-center justify-center relative overflow-hidden">
           <div className={clsx(
-            "absolute top-4 right-4 px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-widest",
-            running ? "bg-success/10 text-success" : "bg-neutral-100 text-neutral-400 dark:bg-neutral-800"
+            "mb-8 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-apple-sm",
+            running ? "bg-success/5 text-success border border-success/10" : "bg-neutral-100 text-neutral-400 dark:bg-neutral-800"
           )}>
-            Core {status?.version || 'v1.0.0'}
+            CORE HIVOID ENGINE {status?.version || 'V0.10.0'} (v{__APP_VERSION__})
           </div>
           <div className={clsx(
             'w-24 h-24 rounded-[2.5rem] flex items-center justify-center transition-all duration-500 shadow-inner mb-6',
@@ -359,6 +361,9 @@ export default function ProtocolPage() {
                   </SettingRow>
                   <SettingRow label="Allowed Hosts (Allow List)" sub="Explicit whitelist restricting all paths.">
                     <textarea value={config.allowed_hosts} onChange={e => setConfig({...config, allowed_hosts: e.target.value})} className="input min-h-[80px] font-mono text-xs py-3" placeholder="e.g. google.com, *.org" />
+                  </SettingRow>
+                  <SettingRow label="Blocked GeoTags" sub="Global blocking by country or category tags.">
+                    <input value={config.blocked_tags} onChange={e => setConfig({...config, blocked_tags: e.target.value})} className="input font-mono text-xs px-4" placeholder="e.g. ir, category-ads" />
                   </SettingRow>
                </div>
             </div>

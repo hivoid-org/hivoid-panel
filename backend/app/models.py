@@ -56,6 +56,10 @@ class User(Base):
     direct_route = Column(Text, default="category-ads")
     cert_pin = Column(String(64), default="")
     
+    # New Server-side per-user filters
+    blocked_hosts = Column(Text, default="") # Comma-separated list
+    blocked_tags = Column(Text, default="")  # Comma-separated list
+    
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

@@ -170,10 +170,10 @@ export default function SettingsPage() {
                     <p className="text-xs text-neutral-500 font-bold uppercase tracking-tighter">Internal directory & binary locations</p>
                  </div>
                  <div className="space-y-6 pt-4">
-                     <StaticField label="Binary Execution Path" value="/usr/local/bin/hivoid-server" />
-                     <StaticField label="Configuration Pipeline" value="/etc/hivoid/server.json" />
-                     <StaticField label="Persistent Database" value="/var/lib/hivoid/panel.db" />
-                     <StaticField label="Logging Stream" value="/var/log/hivoid/access.log" />
+                      <StaticField label="Binary Execution Path" value="/usr/local/bin/hivoid-server" />
+                      <StaticField label="Configuration Pipeline" value="/opt/hivoid-panel/data/server.json" />
+                      <StaticField label="Persistent Database" value="/opt/hivoid-panel/backend/data/hivoid_panel.db" />
+                      <StaticField label="Logging Stream" value="journalctl -u hivoid-server -f" />
                  </div>
               </div>
            )}
