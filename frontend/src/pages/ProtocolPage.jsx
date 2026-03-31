@@ -201,7 +201,7 @@ export default function ProtocolPage() {
       <div className="flex flex-col md:flex-row gap-6">
         {/* Navigation Sidebar */}
         <div className="w-full md:w-64 space-y-2 shrink-0">
-          <TabNav active={activeTab === 'core'} onClick={() => setActiveTab('core')} icon={CpuIcon} label="Core Runtime KIR" />
+          <TabNav active={activeTab === 'core'} onClick={() => setActiveTab('core')} icon={CpuIcon} label="Core Runtime" />
           <TabNav active={activeTab === 'security'} onClick={() => setActiveTab('security')} icon={LockIcon} label="Security & Cryptography" />
           <TabNav active={activeTab === 'feats'} onClick={() => setActiveTab('feats')} icon={ZapIcon} label="Capabilities" />
           {status?.geodata_installed && (
