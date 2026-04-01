@@ -196,8 +196,8 @@ class HiVoidManager:
         
         # 2. Refresh CLI wrapper so `hivoid` always points to updated backend manager code
         if success:
-            if not self.refresh_cli_wrapper():
-                return False
+            self.refresh_cli_wrapper()
+            return self.restart_panel()
         return False
 
     def view_logs(self, service: str = "core") -> None:

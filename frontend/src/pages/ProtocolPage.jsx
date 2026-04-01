@@ -145,7 +145,7 @@ export default function ProtocolPage() {
             "mb-8 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-apple-sm",
             running ? "bg-success/5 text-success border border-success/10" : "bg-neutral-100 text-neutral-400 dark:bg-neutral-800"
           )}>
-            CORE HIVOID ENGINE {status?.version || 'V0.10.0'} ({__APP_VERSION__})
+            {status?.version} ({__APP_VERSION__})
           </div>
           <div className={clsx(
             'w-24 h-24 rounded-[2.5rem] flex items-center justify-center transition-all duration-500 shadow-inner mb-6',

@@ -510,17 +510,29 @@ def list_active_sessions(admin: Admin = Depends(get_current_admin)):
             if not data_started:
                 continue
             
-            # Use regex or split by multiple spaces for fixed-width-like text
+            # Use regex to split by multiple spaces
             import re
-            parts = re.split(r'\s{2,}', line) # Split by 2 or more spaces
+            parts = [p.strip() for p in re.split(r'\s{2,}', line) if p.strip()]
+            
+            # Case 1: email is present (5 parts)
             if len(parts) >= 5:
-                # IN / OUT is usually at the end like "14.5 MB / 2.1 MB"
                 io_parts = parts[4].split('/')
                 sessions.append({
                     "email": parts[0],
                     "uuid": parts[1],
                     "ip": parts[2],
                     "uptime": parts[3],
+                    "bytes_in": io_parts[0].strip() if len(io_parts) > 0 else "0 B",
+                    "bytes_out": io_parts[1].strip() if len(io_parts) > 1 else "0 B"
+                })
+            # Case 2: email is empty (4 parts)
+            elif len(parts) == 4:
+                io_parts = parts[3].split('/')
+                sessions.append({
+                    "email": "",
+                    "uuid": parts[0],
+                    "ip": parts[1],
+                    "uptime": parts[2],
                     "bytes_in": io_parts[0].strip() if len(io_parts) > 0 else "0 B",
                     "bytes_out": io_parts[1].strip() if len(io_parts) > 1 else "0 B"
                 })
