@@ -3,13 +3,14 @@ import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import {
-  LayoutDashboard, Users, Radio, Settings, LogOut, Moon, Sun, Menu, X
+  LayoutDashboard, Users, Radio, Settings, LogOut, Moon, Sun, Menu, X, Wifi
 } from 'lucide-react';
 import clsx from 'clsx';
 
 const NAV = [
   { to: '/',         icon: LayoutDashboard, label: 'Dashboard', end: true },
   { to: '/users',    icon: Users,           label: 'Users' },
+  { to: '/online',   icon: Wifi,            label: 'Online' },
   { to: '/protocol', icon: Radio,           label: 'Protocol' },
   { to: '/settings', icon: Settings,        label: 'Settings' },
 ];

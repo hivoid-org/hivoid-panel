@@ -5,6 +5,7 @@ import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import UsersPage from './pages/UsersPage';
 import ProtocolPage from './pages/ProtocolPage';
+import OnlineUsersPage from './pages/OnlineUsersPage';
 import SettingsPage from './pages/SettingsPage';
 
 function ProtectedRoute({ children }) {
@@ -36,6 +37,7 @@ export default function App() {
       <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
         <Route index element={<DashboardPage />} />
         <Route path="users" element={<UsersPage />} />
+        <Route path="online" element={<OnlineUsersPage />} />
         <Route path="protocol" element={<ProtocolPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>

@@ -473,3 +473,59 @@ def download_geodata(
         return MessageResponse(message="Routing dat files successfully fetched and updated.")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch GeoData: {e}")
+
+@router.post("/shock", response_model=MessageResponse)
+def protocol_shock(admin: Admin = Depends(get_current_admin)):
+    """Force Reconnect (Shock) the HiVoid server."""
+    binary = _check_binary()
+    try:
+        subprocess.run([str(binary), "shock"], check=True)
+        return MessageResponse(message="Shock command issued successfully.")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Shock failed: {e}")
+
+
+@router.get("/active-sessions")
+def list_active_sessions(admin: Admin = Depends(get_current_admin)):
+    """List active HiVoid sessions by parsing core's text output."""
+    binary = _check_binary()
+    try:
+        res = subprocess.run([str(binary), "list"], capture_output=True, text=True)
+        if res.returncode != 0:
+            return {"raw": res.stdout or res.stderr, "sessions": []}
+        
+        lines = [l.strip() for l in res.stdout.split('\n') if l.strip()]
+        sessions = []
+        
+        # Format example:
+        # EMAIL              UUID          REMOTE ADDR        DURATION   IN / OUT
+        # -----              ----          -----------        --------   --------
+        # user@example.com   550e8400...   1.2.3.4:54321      12m34s     14.5 MB / 2.1 MB
+        
+        data_started = False
+        for line in lines:
+            if "-----" in line:
+                data_started = True
+                continue
+            if not data_started:
+                continue
+            
+            # Use regex or split by multiple spaces for fixed-width-like text
+            import re
+            parts = re.split(r'\s{2,}', line) # Split by 2 or more spaces
+            if len(parts) >= 5:
+                # IN / OUT is usually at the end like "14.5 MB / 2.1 MB"
+                io_parts = parts[4].split('/')
+                sessions.append({
+                    "email": parts[0],
+                    "uuid": parts[1],
+                    "ip": parts[2],
+                    "uptime": parts[3],
+                    "bytes_in": io_parts[0].strip() if len(io_parts) > 0 else "0 B",
+                    "bytes_out": io_parts[1].strip() if len(io_parts) > 1 else "0 B"
+                })
+        
+        return sessions
+    except Exception as e:
+        logger.error(f"Failed to list sessions: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

@@ -70,7 +70,7 @@ try:
     with open(Path(__file__).resolve().parent.parent.parent / "version.json") as f:
         APP_VERSION = json.load(f)["version"]
 except Exception:
-    APP_VERSION = "v1.6.0"
+    APP_VERSION = "v1.6.1"
 
 # ─── App ────────────────────────────────────────────────────────────────────
 app = FastAPI(

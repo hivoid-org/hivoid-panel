@@ -112,6 +112,8 @@ export const protocol = {
   syncConfig: () => request('/protocol/sync-config', { method: 'POST' }),
   generateCert: () => request('/protocol/generate-cert', { method: 'POST' }),
   downloadGeodata: () => request('/protocol/download-geodata', { method: 'POST' }),
+  shock: () => request('/protocol/shock', { method: 'POST' }),
+  activeSessions: () => request('/protocol/active-sessions'),
 };
 
 // ── Settings ──────────────────────────────────────────────────

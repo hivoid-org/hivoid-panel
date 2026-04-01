@@ -97,6 +97,7 @@ export default function ProtocolPage() {
       if (type === 'start') r = await protocol.start();
       if (type === 'stop') r = await protocol.stop();
       if (type === 'restart') r = await protocol.restart();
+      if (type === 'shock') r = await protocol.shock();
       if (type === 'sync') r = await protocol.syncConfig();
       if (type === 'cert') r = await protocol.generateCert();
       if (type === 'geodata') r = await protocol.downloadGeodata();
@@ -144,7 +145,7 @@ export default function ProtocolPage() {
             "mb-8 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-apple-sm",
             running ? "bg-success/5 text-success border border-success/10" : "bg-neutral-100 text-neutral-400 dark:bg-neutral-800"
           )}>
-            CORE HIVOID ENGINE {status?.version || 'V0.10.0'} (v{__APP_VERSION__})
+            CORE HIVOID ENGINE {status?.version || 'V0.10.0'} ({__APP_VERSION__})
           </div>
           <div className={clsx(
             'w-24 h-24 rounded-[2.5rem] flex items-center justify-center transition-all duration-500 shadow-inner mb-6',
@@ -175,6 +176,10 @@ export default function ProtocolPage() {
                 <button onClick={() => executeAction('restart')} disabled={!!actionLoading} className="btn-secondary h-12 rounded-2xl flex-1">
                   <RotateCcwIcon className={clsx('w-4 h-4 mr-1', actionLoading === 'restart' && 'animate-spin')} />
                   Restart
+                </button>
+                <button onClick={() => executeAction('shock')} disabled={!!actionLoading} className="btn bg-orange-100 dark:bg-orange-950 text-orange-600 dark:text-orange-400 hover:bg-orange-200 h-12 rounded-2xl flex-1">
+                  {actionLoading === 'shock' ? <LoaderIcon className="w-5 h-5 animate-spin" /> : <ZapIcon className="w-4 h-4 fill-current mr-1" />}
+                  Shock
                 </button>
                 <button onClick={() => executeAction('stop')} disabled={!!actionLoading} className="btn bg-neutral-100 dark:bg-neutral-800 text-danger hover:bg-danger/10 h-12 rounded-2xl flex-1">
                   {actionLoading === 'stop' ? <LoaderIcon className="w-5 h-5 animate-spin" /> : <SquareIcon className="w-4 h-4 fill-current mr-1" />}
