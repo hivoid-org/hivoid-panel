@@ -70,6 +70,7 @@ export default function ProtocolPage() {
               blocked_tags: Array.isArray(parsed.blocked_tags) ? parsed.blocked_tags.join(", ") : '',
               geosite_path: parsed.geosite_path || './geosite.dat',
               geoip_path: parsed.geoip_path || './geoip.dat',
+              name: parsed.name || 'HiVoid-Node',
               bypass_ips: Array.isArray(parsed.bypass_ips) ? parsed.bypass_ips.join(", ") : '127.0.0.1/32, 192.168.1.0/24',
               socks_port: parsed.socks_port || 1080,
               dns_port: parsed.dns_port || 5353,
@@ -237,6 +238,9 @@ export default function ProtocolPage() {
                  <p className="text-xs text-neutral-500 mt-1">Foundational execution parameters and logging verbosity.</p>
                </div>
                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+                  <SettingRow label="Server Display Name" sub="Identification tag for this node.">
+                    <input value={config.name || 'HiVoid-Node'} onChange={e => setConfig({...config, name: e.target.value})} className="input font-bold" placeholder="e.g. Germany-Node-01" />
+                  </SettingRow>
                   <SettingRow label="Engine Mode" sub="Performance vs Stealth tradeoffs.">
                     <select value={config.mode} onChange={e => setConfig({...config, mode: e.target.value})} className="input font-bold">
                         <option value="performance">Performance</option>

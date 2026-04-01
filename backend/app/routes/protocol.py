@@ -131,6 +131,7 @@ def sync_server_config(db: Session) -> bool:
             "mode": (panel_config.get("mode") or "performance").lower(),
             "log_level": panel_config.get("log_level") or "info"
         },
+        "name": panel_config.get("name") or "HiVoid-Node",
         "security": {
             "cert_file": panel_config.get("cert_file") or str(Path(settings.CERT_FILE).resolve()),
             "key_file": panel_config.get("key_file") or str(Path(settings.KEY_FILE).resolve())
@@ -511,6 +512,7 @@ def list_active_sessions(admin: Admin = Depends(get_current_admin)):
         for s in raw_sessions:
             sessions.append({
                 "email": s.get("email") or "Anonymous",
+                "node": s.get("config_name") or "Main",
                 "uuid": s.get("uuid") or "",
                 "ip": s.get("remote_addr") or "",
                 "uptime": s.get("duration") or "0s",
