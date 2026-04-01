@@ -124,7 +124,6 @@ def sync_server_config(db: Session) -> bool:
         except Exception:
             panel_config = {}
 
-    # Build the new HiVoid Server 1.1 structured format
     config = {
         "server": {
             "listen": panel_config.get("listen") or f":{panel_config.get('port', 4433)}",
@@ -224,7 +223,11 @@ def protocol_status(
         if binary.exists():
             res = subprocess.run([str(binary), "version"], capture_output=True, text=True, timeout=2)
             if res.returncode == 0:
-                version_str = res.stdout.strip().split("\n")[0]
+                v = res.stdout.strip().split("\n")[0]
+                # Ensure no double 'v' prefix if the binary output already includes it
+                while v.lower().startswith('vv'):
+                    v = v[1:]
+                version_str = v
     except Exception:
         pass
 

@@ -7,8 +7,8 @@ import {
   Download as DownloadIcon,
   Upload as UploadIcon,
   Clock as ClockIcon,
-  User as UserIcon,
-  Hash as HashIcon
+  Users as UsersIcon,
+  Globe as GlobeIcon
 } from 'lucide-react';
 import { protocol } from '../api';
 import clsx from 'clsx';

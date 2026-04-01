@@ -75,7 +75,7 @@ class HiVoidManager:
         return {
             "status": "running" if running else "stopped",
             "pid": pid,
-            "version": "unknown"  # Potentially read from binary -v
+            "version": "unknown"
         }
 
     def reset_admin_password(self, new_password: str) -> bool:
