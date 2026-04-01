@@ -89,11 +89,6 @@ export default function OnlineUsersPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-neutral-50/50 dark:bg-neutral-900/50 border-b border-neutral-100 dark:border-neutral-800 text-left">
-                <th className="px-6 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-widest">Client Identity</th>
-                <th className="px-6 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-widest">Network Source</th>
-                <th className="px-6 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-widest">Uptime</th>
-                <th className="px-6 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-widest">Throughput</th>
-                <th className="px-6 py-4 text-[10px] font-black text-neutral-400 uppercase tracking-widest">Status</th>
                 <th className="px-6 py-4 text-left text-[10px] font-black text-neutral-400 uppercase tracking-widest">Client Identity</th>
                 <th className="px-6 py-4 text-left text-[10px] font-black text-neutral-400 uppercase tracking-widest">Node</th>
                 <th className="px-6 py-4 text-left text-[10px] font-black text-neutral-400 uppercase tracking-widest">Network Source</th>
@@ -123,9 +118,14 @@ export default function OnlineUsersPage() {
                       <div className="w-10 h-10 rounded-xl bg-neutral-100 dark:bg-neutral-900 flex items-center justify-center group-hover:scale-110 transition-transform">
                         <UsersIcon className="w-5 h-5 text-neutral-400" />
                       </div>
-                      <div className="min-w-0">
-                        <p className="font-bold tracking-tight truncate">{session.email || 'Anonymous'}</p>
-                        <p className="text-[10px] font-mono text-neutral-400 truncate w-32">{session.uuid}</p>
+                      <div className="flex flex-col gap-0.5 min-w-0">
+                        <div className="flex items-center gap-2">
+                           <p className="font-bold tracking-tight truncate text-sm">{session.db_name || 'Unknown User'}</p>
+                           {session.email && session.email !== 'Anonymous' && (
+                              <span className="text-[10px] bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded font-mono text-neutral-500 truncate max-w-[120px]" title={session.email}>{session.email}</span>
+                           )}
+                        </div>
+                        <p className="text-[10px] font-mono text-neutral-400 truncate w-40" title={session.uuid}>{session.uuid}</p>
                       </div>
                     </div>
                   </td>

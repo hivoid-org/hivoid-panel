@@ -7,7 +7,7 @@
 Professional management interface for HiVoid encrypted core.
 
 
-- **Version:** `v1.6.5`
+- **Version:** `v1.6.6`
 - **License:** `MPL-2.0`
 
 ## 🚀 One-Line Installation

@@ -217,16 +217,14 @@ def protocol_status(
     uptime_str = None
     version_str = "unknown"
 
-    # Try to fetch binary version
     try:
         binary = Path(settings.HIVOID_BINARY_PATH)
         if binary.exists():
             res = subprocess.run([str(binary), "version"], capture_output=True, text=True, timeout=2)
             if res.returncode == 0:
                 v = res.stdout.strip().split("\n")[0]
-                # Ensure no double 'v' prefix if the binary output already includes it
-                while v.lower().startswith('vv'):
-                    v = v[1:]
+                while "vv" in v.lower():
+                    v = v.replace("vv", "v").replace("VV", "V")
                 version_str = v
     except Exception:
         pass
@@ -490,8 +488,11 @@ def protocol_shock(admin: Admin = Depends(get_current_admin)):
 
 
 @router.get("/active-sessions")
-def list_active_sessions(admin: Admin = Depends(get_current_admin)):
-    """List active HiVoid sessions using the core engine's JSON output."""
+def list_active_sessions(
+    admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """List active HiVoid sessions using the core engine's JSON output with DB labels."""
     def fmt_bytes(b):
         if not b: return "0 B"
         if b < 1024: return f"{b} B"
@@ -511,16 +512,24 @@ def list_active_sessions(admin: Admin = Depends(get_current_admin)):
         except:
             return []
 
+        # Fetch all users to map UUID -> Name/Email
+        users_map = {u.uuid: (u.name, u.email) for u in db.query(User).all()}
+
         sessions = []
         for s in raw_sessions:
+            uid = s.get("uuid") or ""
+            db_name, db_email = users_map.get(uid, ("Offline/Unknown", s.get("email") or "Anonymous"))
+            
             sessions.append({
-                "email": s.get("email") or "Anonymous",
+                "email": db_email,
+                "db_name": db_name,
                 "node": s.get("config_name") or "Main",
-                "uuid": s.get("uuid") or "",
+                "uuid": uid,
                 "ip": s.get("remote_addr") or "",
                 "uptime": s.get("duration") or "0s",
                 "bytes_in": fmt_bytes(s.get("traffic_in", 0)),
-                "bytes_out": fmt_bytes(s.get("traffic_out", 0))
+                "bytes_out": fmt_bytes(s.get("traffic_out", 0)),
+                "total_bytes": fmt_bytes(s.get("traffic_in", 0) + s.get("traffic_out", 0))
             })
         
         return sessions
