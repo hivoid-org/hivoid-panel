@@ -26,6 +26,8 @@ import {
   Download as DownloadIcon,
 } from 'lucide-react';
 import { protocol, users as usersApi, settings as settingsApi } from '../api';
+import GeoTagPicker from '../components/GeoTagPicker';
+import { ROUTE_CATEGORIES } from '../constants';
 import clsx from 'clsx';
 
 export default function ProtocolPage() {
@@ -362,9 +364,12 @@ export default function ProtocolPage() {
                   <SettingRow label="Allowed Hosts (Allow List)" sub="Explicit whitelist restricting all paths.">
                     <textarea value={config.allowed_hosts} onChange={e => setConfig({...config, allowed_hosts: e.target.value})} className="input min-h-[80px] font-mono text-xs py-3" placeholder="e.g. google.com, *.org" />
                   </SettingRow>
-                  <SettingRow label="Blocked GeoTags" sub="Global blocking by country or category tags.">
-                    <input value={config.blocked_tags} onChange={e => setConfig({...config, blocked_tags: e.target.value})} className="input font-mono text-xs px-4" placeholder="e.g. ir, category-ads" />
-                  </SettingRow>
+                  <GeoTagPicker 
+                    label="Blocked GeoTags" 
+                    sub="Global blocking by country or category tags."
+                    value={config.blocked_tags}
+                    onChange={v => setConfig({...config, blocked_tags: v})}
+                  />
                </div>
             </div>
           )}

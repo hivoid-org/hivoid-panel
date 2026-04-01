@@ -31,33 +31,9 @@ import {
   Lock as LockIcon
 } from 'lucide-react';
 import { users as usersApi, protocol as protocolApi } from '../api';
+import GeoTagPicker from '../components/GeoTagPicker';
+import { MODES, OBFS, ROUTE_CATEGORIES } from '../constants';
 import clsx from 'clsx';
-
-const MODES = [
-  { value: 'performance', label: 'Performance' },
-  { value: 'high_performance', label: 'High Performance' },
-  { value: 'stealth', label: 'Stealth' },
-  { value: 'balanced', label: 'Balanced' },
-  { value: 'adaptive', label: 'Adaptive' },
-];
-const OBFS = [
-  { value: 'none', label: 'None' },
-  { value: 'random', label: 'Random' },
-  { value: 'http', label: 'HTTP' },
-  { value: 'tls', label: 'TLS' },
-  { value: 'masque', label: 'Masque' },
-  { value: 'webtransport', label: 'WebTransport' },
-  { value: 'ghost', label: 'Ghost' },
-];
-
-const ROUTE_CATEGORIES = [
-  'category-ads-all', 'category-ads', 'category-behavior-ads', 'category-behavior-tracking',
-  'category-social', 'category-media', 'category-speedtest', 'category-scholar', 
-  'category-games', 'category-games-cn', 'category-games-!cn', 'category-entertainment',
-  'category-porn', 'category-ip-geo-detect', 'category-gov-ir', 'category-bank-ir', 
-  'category-ir', 'cn', 'geolocation-cn', 'geolocation-!cn', 'google', 'apple', 
-  'microsoft', 'amazon', 'facebook', 'netflix', 'disney', 'telegram', 'twitter', 'openai'
-];
 
 export default function UsersPage() {
   const [users, setUsers] = useState([]);
@@ -300,14 +276,6 @@ function UserModal({ user, onClose, onSaved }) {
     }
   };
 
-  const toggleCategory = (cat) => {
-    const list = form.direct_route.split(',').map(s => s.trim()).filter(Boolean);
-    if (list.includes(cat)) {
-        setForm({ ...form, direct_route: list.filter(c => c !== cat).join(', ') });
-    } else {
-        setForm({ ...form, direct_route: [...list, cat].join(', ') });
-    }
-  };
 
   const submit = async (e) => {
     e.preventDefault();
@@ -422,30 +390,21 @@ function UserModal({ user, onClose, onSaved }) {
                     <AdvancedSetting label="GeoIP Data Path" sub="Relative to core binary."><input value={form.geoip_path} onChange={e => setForm({...form, geoip_path: e.target.value})} className="input text-xs" /></AdvancedSetting>
                     <AdvancedSetting label="GeoSite Data Path" sub="V2Ray directory location."><input value={form.geosite_path} onChange={e => setForm({...form, geosite_path: e.target.value})} className="input text-xs" /></AdvancedSetting>
                  </div>
-                 <AdvancedSetting label="Direct Route Tags" sub="Forced outbound bypass via direct.">
-                    <div className="flex flex-wrap gap-1.5 mb-2">
-                        {ROUTE_CATEGORIES.map(cat => (
-                            <button
-                                key={cat}
-                                type="button"
-                                onClick={() => toggleCategory(cat)}
-                                className={clsx(
-                                    "px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest border transition-all",
-                                    form.direct_route.includes(cat) 
-                                        ? "bg-neutral-900 border-neutral-900 text-white dark:bg-white dark:text-neutral-900" 
-                                        : "bg-neutral-50 dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 text-neutral-400"
-                                )}
-                            >
-                                {cat.replace('category-', '')}
-                            </button>
-                        ))}
-                    </div>
-                    <input value={form.direct_route} onChange={e => setForm({...form, direct_route: e.target.value})} className="input text-xs" placeholder="Comma separated categories" />
-                 </AdvancedSetting>
-                 <div className="grid grid-cols-2 gap-6">
-                    <AdvancedSetting label="Blocked Hosts" sub="Server-side domain blacklist."><input value={form.blocked_hosts} onChange={e => setForm({...form, blocked_hosts: e.target.value})} className="input text-xs font-mono" placeholder="x.com, ads.net" /></AdvancedSetting>
-                    <AdvancedSetting label="Blocked GeoTags" sub="Server-side GeoData blocking."><input value={form.blocked_tags} onChange={e => setForm({...form, blocked_tags: e.target.value})} className="input text-xs font-mono" placeholder="ir, category-ads" /></AdvancedSetting>
-                 </div>
+                 <GeoTagPicker 
+                    label="Direct Route Tags" 
+                    sub="Forced outbound bypass via direct."
+                    value={form.direct_route}
+                    onChange={v => setForm({...form, direct_route: v})}
+                  />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                     <AdvancedSetting label="Blocked Hosts" sub="Server-side domain blacklist."><input value={form.blocked_hosts} onChange={e => setForm({...form, blocked_hosts: e.target.value})} className="input text-xs font-mono" placeholder="x.com, ads.net" /></AdvancedSetting>
+                     <GeoTagPicker 
+                        label="Blocked GeoTags" 
+                        sub="Server-side GeoData blocking."
+                        value={form.blocked_tags}
+                        onChange={v => setForm({...form, blocked_tags: v})}
+                     />
+                  </div>
               </div>
             )}
           </div>
