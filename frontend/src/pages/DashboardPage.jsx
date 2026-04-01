@@ -24,7 +24,7 @@ export default function DashboardPage() {
   const [cpuH, setCpuH] = useState([]);
   const [ramH, setRamH] = useState([]);
   const [userCount, setUserCount] = useState({ total: 0, active: 0 });
-  const [proto, setProto] = useState({ running: false, version: `v${__APP_VERSION__}` });
+  const [proto, setProto] = useState({ running: false, version: __APP_VERSION__ });
   const [loading, setLoading] = useState(true);
   const [recentUsers, setRecentUsers] = useState([]);
 
@@ -85,7 +85,7 @@ export default function DashboardPage() {
                 : 'bg-danger/5 border-danger/20 text-danger'
             )}>
               <span className={clsx('w-2 h-2 rounded-full shadow-lg', proto.running ? 'bg-success animate-pulse' : 'bg-danger')} />
-              Core v{__APP_VERSION__} {proto.running ? 'Operational' : 'Offline'}
+              Core {__APP_VERSION__} {proto.running ? 'Operational' : 'Offline'}
            </div>
         </div>
       </div>
@@ -137,7 +137,7 @@ export default function DashboardPage() {
                     </div>
                     <div>
                        <h3 className="text-sm font-black uppercase tracking-widest">Real-time Load</h3>
-                       <p className="text-[10px] text-neutral-400 font-bold">CPU & MEMORY FREQUENCY</p>
+                       <p className="text-center text-xs text-neutral-400 mt-6">HiVoid {__APP_VERSION__}</p>
                     </div>
                  </div>
                  <div className="flex gap-4">

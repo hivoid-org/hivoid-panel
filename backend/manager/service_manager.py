@@ -181,8 +181,9 @@ class HiVoidManager:
         
         # 2. If update was successful, restart to use new version
         if success:
-            logger.info("Core updated, restarting service...")
-            return self.restart_service()
+            logger.info("Core updated, restarting engine and panel...")
+            self.restart_service()
+            return self.restart_panel()
         
         return False
 

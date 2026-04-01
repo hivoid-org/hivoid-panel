@@ -487,57 +487,38 @@ def protocol_shock(admin: Admin = Depends(get_current_admin)):
 
 @router.get("/active-sessions")
 def list_active_sessions(admin: Admin = Depends(get_current_admin)):
-    """List active HiVoid sessions by parsing core's text output."""
+    """List active HiVoid sessions using the core engine's JSON output."""
+    def fmt_bytes(b):
+        if not b: return "0 B"
+        if b < 1024: return f"{b} B"
+        for unit in ['KB', 'MB', 'GB', 'TB']:
+            b /= 1024
+            if b < 1024: return f"{b:.1f} {unit}"
+        return f"{b:.1f} PB"
+
     binary = _check_binary()
     try:
-        res = subprocess.run([str(binary), "list"], capture_output=True, text=True)
+        res = subprocess.run([str(binary), "list", "--json"], capture_output=True, text=True, timeout=5)
         if res.returncode != 0:
-            return {"raw": res.stdout or res.stderr, "sessions": []}
+            return []
         
-        lines = [l.strip() for l in res.stdout.split('\n') if l.strip()]
+        try:
+            raw_sessions = json.loads(res.stdout)
+        except:
+            return []
+
         sessions = []
-        
-        # Format example:
-        # EMAIL              UUID          REMOTE ADDR        DURATION   IN / OUT
-        # -----              ----          -----------        --------   --------
-        # user@example.com   550e8400...   1.2.3.4:54321      12m34s     14.5 MB / 2.1 MB
-        
-        data_started = False
-        for line in lines:
-            if "-----" in line:
-                data_started = True
-                continue
-            if not data_started:
-                continue
-            
-            # Use regex to split by multiple spaces
-            import re
-            parts = [p.strip() for p in re.split(r'\s{2,}', line) if p.strip()]
-            
-            # Case 1: email is present (5 parts)
-            if len(parts) >= 5:
-                io_parts = parts[4].split('/')
-                sessions.append({
-                    "email": parts[0],
-                    "uuid": parts[1],
-                    "ip": parts[2],
-                    "uptime": parts[3],
-                    "bytes_in": io_parts[0].strip() if len(io_parts) > 0 else "0 B",
-                    "bytes_out": io_parts[1].strip() if len(io_parts) > 1 else "0 B"
-                })
-            # Case 2: email is empty (4 parts)
-            elif len(parts) == 4:
-                io_parts = parts[3].split('/')
-                sessions.append({
-                    "email": "",
-                    "uuid": parts[0],
-                    "ip": parts[1],
-                    "uptime": parts[2],
-                    "bytes_in": io_parts[0].strip() if len(io_parts) > 0 else "0 B",
-                    "bytes_out": io_parts[1].strip() if len(io_parts) > 1 else "0 B"
-                })
+        for s in raw_sessions:
+            sessions.append({
+                "email": s.get("email") or "Anonymous",
+                "uuid": s.get("uuid") or "",
+                "ip": s.get("remote_addr") or "",
+                "uptime": s.get("duration") or "0s",
+                "bytes_in": fmt_bytes(s.get("traffic_in", 0)),
+                "bytes_out": fmt_bytes(s.get("traffic_out", 0))
+            })
         
         return sessions
     except Exception as e:
         logger.error(f"Failed to list sessions: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        return []

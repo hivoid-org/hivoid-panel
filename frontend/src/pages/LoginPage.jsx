@@ -115,7 +115,7 @@ export default function LoginPage() {
           </form>
         </div>
 
-        <p className="text-center text-xs text-neutral-400 mt-6">HiVoid v{__APP_VERSION__}</p>
+        <p className="text-center text-xs text-neutral-400 mt-6">HiVoid {__APP_VERSION__}</p>
       </div>
     </div>
   );
