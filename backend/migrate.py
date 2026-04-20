@@ -3,17 +3,21 @@ import os
 
 import urllib.parse
 
-settings_db_path = '/opt/hivoid-panel/data/hivoid_panel.db'
+settings_db_path = './data/hivoid_panel.db'
 env_db_url = os.getenv('DATABASE_URL', '')
 
 DB_PATH = settings_db_path
 if env_db_url.startswith('sqlite'):
+    import urllib.parse
     parsed = urllib.parse.urlparse(env_db_url)
     path = parsed.path
-    if path.startswith('/'):
-         if os.name == 'nt' and path[2] == ':':
-             path = path[1:]
+    if path.startswith('/') and os.name == 'nt':
+         path = path[1:]
     DB_PATH = path
+else:
+    # If not in env, check common paths
+    if not os.path.exists(DB_PATH) and os.path.exists('/opt/hivoid-panel/data/hivoid_panel.db'):
+        DB_PATH = '/opt/hivoid-panel/data/hivoid_panel.db'
 
 def migrate():
     global DB_PATH
@@ -63,6 +67,16 @@ def migrate():
                 cursor.execute(f"ALTER TABLE admins ADD COLUMN {col_name} {col_def}")
             except Exception as e:
                 print(f"Error adding {col_name} to admins: {e}")
+
+    # Migrate panel_settings
+    cursor.execute("PRAGMA table_info(panel_settings)")
+    ps_cols = [col[1] for col in cursor.fetchall()]
+    if 'servers' not in ps_cols:
+        print("Adding column 'servers' to panel_settings")
+        try:
+            cursor.execute("ALTER TABLE panel_settings ADD COLUMN servers TEXT")
+        except Exception as e:
+            print(f"Error adding 'servers' to panel_settings: {e}")
 
     conn.commit()
     conn.close()

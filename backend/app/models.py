@@ -54,7 +54,16 @@ class User(Base):
     geoip_path = Column(String(255), default="./geoip.dat")
     geosite_path = Column(String(255), default="./geosite.dat")
     direct_route = Column(Text, default="category-ads")
+    direct_geosite = Column(Text, default="")
+    direct_geoip = Column(Text, default="")
+    direct_domains = Column(Text, default="")
+    direct_ips = Column(Text, default="")
+    direct_dns_servers = Column(Text, default="")
     cert_pin = Column(String(64), default="")
+
+    # Core v1.1.0 Persistence
+    persistence = Column(Boolean, default=True)
+    state_file = Column(String(255), default="state.json")
     
     # New Server-side per-user filters
     blocked_hosts = Column(Text, default="") # Comma-separated list
@@ -71,6 +80,7 @@ class PanelSettings(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     server_address = Column(String(255), nullable=False)
+    servers = Column(Text, nullable=True) # Comma-separated list of servers
     panel_port = Column(Integer, default=8443)
     theme = Column(String(10), default="dark")  # dark | light
     hivoid_config = Column(Text, nullable=True)  # JSON blob

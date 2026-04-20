@@ -1,7 +1,7 @@
 {
   "name": "hivoid-panel",
   "private": true,
-  "version": "v1.6.6",
+  "version": "v1.7.0",
   "type": "module",
   "scripts": {
     "dev": "vite",

@@ -8,3 +8,4 @@ github.py
 releases.md
 check.py
 backend/data/*
+install-dev.sh

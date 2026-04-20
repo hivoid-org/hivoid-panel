@@ -86,15 +86,15 @@ export default function OnlineUsersPage() {
 
       <div className="card overflow-hidden min-h-[300px]">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm table-fixed">
             <thead>
               <tr className="bg-neutral-50/50 dark:bg-neutral-900/50 border-b border-neutral-100 dark:border-neutral-800 text-left">
-                <th className="px-6 py-4 text-left text-[10px] font-black text-neutral-400 uppercase tracking-widest">Client Identity</th>
-                <th className="px-6 py-4 text-left text-[10px] font-black text-neutral-400 uppercase tracking-widest">Node</th>
-                <th className="px-6 py-4 text-left text-[10px] font-black text-neutral-400 uppercase tracking-widest">Network Source</th>
-                <th className="px-6 py-4 text-left text-[10px] font-black text-neutral-400 uppercase tracking-widest">Uptime</th>
-                <th className="px-6 py-4 text-left text-[10px] font-black text-neutral-400 uppercase tracking-widest">Throughput</th>
-                <th className="px-6 py-4 text-right text-[10px] font-black text-neutral-400 uppercase tracking-widest">Status</th>
+                <th className="px-6 py-4 w-72 text-[10px] font-black text-neutral-400 uppercase tracking-widest">Client Identity</th>
+                <th className="px-6 py-4 w-28 text-[10px] font-black text-neutral-400 uppercase tracking-widest">Node</th>
+                <th className="px-6 py-4 w-40 text-[10px] font-black text-neutral-400 uppercase tracking-widest">Network Source</th>
+                <th className="px-6 py-4 w-28 text-[10px] font-black text-neutral-400 uppercase tracking-widest">Uptime</th>
+                <th className="px-6 py-4 w-36 text-[10px] font-black text-neutral-400 uppercase tracking-widest">Throughput</th>
+                <th className="px-6 py-4 w-24 text-right text-[10px] font-black text-neutral-400 uppercase tracking-widest">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
@@ -113,62 +113,60 @@ export default function OnlineUsersPage() {
                 </tr>
               ) : filteredSessions.map((session, idx) => (
                 <tr key={idx} className="group hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
-                  <td className="px-6 py-5">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-xl bg-neutral-100 dark:bg-neutral-900 flex items-center justify-center group-hover:scale-110 transition-transform">
-                        <UsersIcon className="w-5 h-5 text-neutral-400" />
+                  <td className="px-6 py-5 w-72">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 shrink-0 rounded-xl bg-neutral-100 dark:bg-neutral-900 flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <UsersIcon className="w-4 h-4 text-neutral-400" />
                       </div>
-                      <div className="flex flex-col gap-0.5 min-w-0">
-                        <div className="flex items-center gap-2">
-                           <p className="font-bold tracking-tight truncate text-sm">{session.db_name || 'Unknown User'}</p>
-                           {session.email && session.email !== 'Anonymous' && (
-                              <span className="text-[10px] bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded font-mono text-neutral-500 truncate max-w-[120px]" title={session.email}>{session.email}</span>
-                           )}
-                        </div>
-                        <p className="text-[10px] font-mono text-neutral-400 truncate w-40" title={session.uuid}>{session.uuid}</p>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold tracking-tight truncate text-sm">{session.db_name || 'Unknown User'}</p>
+                        {session.email && session.email !== 'Anonymous' && (
+                          <p className="text-[10px] font-mono text-neutral-500 truncate" title={session.email}>{session.email}</p>
+                        )}
+                        <p className="text-[10px] font-mono text-neutral-400 truncate" title={session.uuid}>{session.uuid}</p>
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-5">
+                  <td className="px-6 py-5 w-28">
                     <div className="flex items-center gap-2">
-                       <div className="w-2 h-2 rounded-full bg-primary/40 animate-pulse" />
-                       <span className="text-xs font-bold">{session.node}</span>
+                      <div className="w-2 h-2 shrink-0 rounded-full bg-primary/40 animate-pulse" />
+                      <span className="text-xs font-bold truncate">{session.node}</span>
                     </div>
                   </td>
-                  <td className="px-6 py-5">
+                  <td className="px-6 py-5 w-40">
                     <div className="flex items-center gap-2 text-neutral-500">
-                      <GlobeIcon className="w-4 h-4" />
-                      <span className="text-xs font-mono">{session.ip}</span>
+                      <GlobeIcon className="w-4 h-4 shrink-0" />
+                      <span className="text-xs font-mono truncate">{session.ip}</span>
                     </div>
                   </td>
-                  <td className="px-6 py-5">
+                  <td className="px-6 py-5 w-28">
                     <div className="flex items-center gap-2 text-[11px] font-bold text-neutral-500">
-                       <ClockIcon className="w-3.5 h-3.5 opacity-50" />
-                       {session.uptime || '0s'}
+                      <ClockIcon className="w-3.5 h-3.5 shrink-0 opacity-50" />
+                      {session.uptime || '0s'}
                     </div>
                   </td>
-                  <td className="px-6 py-5">
-                    <div className="flex flex-col gap-2 w-28">
-                       <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-1.5 text-neutral-400">
-                             <DownloadIcon className="w-3 h-3" />
-                             <span className="text-[10px] font-black">DL</span>
-                          </div>
-                          <p className="text-xs font-bold tracking-tight text-neutral-700 dark:text-neutral-300">{session.bytes_in}</p>
-                       </div>
-                       <div className="flex items-center justify-between text-neutral-500">
-                          <div className="flex items-center gap-1.5">
-                             <UploadIcon className="w-3 h-3" />
-                             <span className="text-[10px] font-black">UL</span>
-                          </div>
-                          <p className="text-xs font-bold tracking-tight text-neutral-700 dark:text-neutral-300">{session.bytes_out}</p>
-                       </div>
+                  <td className="px-6 py-5 w-36">
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1 text-neutral-400">
+                          <DownloadIcon className="w-3 h-3" />
+                          <span className="text-[10px] font-black">DL</span>
+                        </div>
+                        <p className="text-xs font-bold text-neutral-700 dark:text-neutral-300">{session.bytes_in}</p>
+                      </div>
+                      <div className="flex items-center justify-between gap-2 text-neutral-500">
+                        <div className="flex items-center gap-1">
+                          <UploadIcon className="w-3 h-3" />
+                          <span className="text-[10px] font-black">UL</span>
+                        </div>
+                        <p className="text-xs font-bold text-neutral-700 dark:text-neutral-300">{session.bytes_out}</p>
+                      </div>
                     </div>
                   </td>
-                  <td className="px-6 py-5">
-                    <div className="flex items-center gap-2">
-                       <span className="w-2 h-2 rounded-full bg-success shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse" />
-                       <span className="text-[10px] font-black uppercase text-success tracking-widest">Online</span>
+                  <td className="px-6 py-5 w-24">
+                    <div className="flex items-center justify-end gap-2">
+                      <span className="w-2 h-2 rounded-full bg-success shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse" />
+                      <span className="text-[10px] font-black uppercase text-success tracking-widest">Online</span>
                     </div>
                   </td>
                 </tr>

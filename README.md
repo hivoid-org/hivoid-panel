@@ -7,8 +7,14 @@
 Professional management interface for HiVoid encrypted core.
 
 
-- **Version:** `v1.6.6`
+- **Version:** `v1.7.0`
 - **License:** `MPL-2.0`
+
+## ✨ Features (v1.7.0)
+- **Core v1.2.0 Synchronization**: Full support for the latest HiVoid-Core features and configuration schemas.
+- **Engine Persistence**: Manage disk-based state memory for intelligence metrics directly from the user dashboard.
+- **Granular Routing Control**: Dedicated management for GeoSite, GeoIP, Domain-based, and IP-based routing rules.
+- **Enhanced Telemetry**: Real-time monitoring of user sessions with integrated database identity tracking.
 
 ## 🚀 One-Line Installation
 

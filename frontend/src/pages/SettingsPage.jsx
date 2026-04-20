@@ -12,7 +12,11 @@ import {
   Terminal as TerminalIcon,
   Database as DatabaseIcon,
   Cpu as CpuIcon,
-  Globe as GlobeIcon
+  Globe as GlobeIcon,
+  Server as ServerIcon,
+  Activity as ActivityIcon,
+  Network as NetworkIcon,
+  Settings as SettingsLucide
 } from 'lucide-react';
 import { settings as settingsApi, auth as authApi } from '../api';
 import clsx from 'clsx';
@@ -31,13 +35,27 @@ export default function SettingsPage() {
   const [showPw, setShowPw] = useState(false);
   const [pwLoading, setPwLoading] = useState(false);
 
+  // Global Settings
+  const [globalSettings, setGlobalSettings] = useState({
+    server_address: '',
+    servers: '',
+    hivoid_config: '{}'
+  });
+  const [settingsLoading, setSettingsLoading] = useState(false);
+
   useEffect(() => {
     const load = async () => {
       try {
         const user = await authApi.me();
         setUsername(user.username);
         setTotpEnabled(user.totp_enabled);
-        await settingsApi.get();
+        
+        const sets = await settingsApi.get();
+        setGlobalSettings({
+          server_address: sets.server_address || '',
+          servers: sets.servers || '',
+          hivoid_config: sets.hivoid_config || '{}'
+        });
       } catch (e) {
         console.error(e);
       } finally {
@@ -82,6 +100,26 @@ export default function SettingsPage() {
     }
   };
 
+  const handleUpdateGlobal = async (e) => {
+    e.preventDefault();
+    setSettingsLoading(true);
+    try {
+      // Validate JSON
+      try {
+        JSON.parse(globalSettings.hivoid_config);
+      } catch(err) {
+        throw new Error("Invalid JSON in Core Configuration");
+      }
+
+      await settingsApi.update(globalSettings);
+      notify('Global parameters synchronized');
+    } catch (e) {
+      notify(e.message, false);
+    } finally {
+      setSettingsLoading(false);
+    }
+  };
+
   if (loading) return (
     <div className="flex items-center justify-center h-64">
       <div className="w-6 h-6 border-2 border-neutral-300 dark:border-neutral-700 border-t-neutral-900 dark:border-t-white rounded-full animate-spin" />
@@ -104,7 +142,7 @@ export default function SettingsPage() {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 px-2">
         <div>
           <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 mb-1">
-             <SettingsIcon className="w-3 h-3" /> Panel Customization
+             <SettingsLucide className="w-3 h-3" /> Panel Customization
           </div>
           <h1 className="text-4xl font-black tracking-tighter">System Settings</h1>
         </div>
@@ -114,9 +152,9 @@ export default function SettingsPage() {
         {/* Settings Navigation */}
         <div className="w-full lg:w-72 space-y-2 shrink-0">
            <TabItem active={activeTab === 'admin'} onClick={() => setActiveTab('admin')} icon={UserIcon} label="Admin Account" />
-           <TabItem active={activeTab === 'system'} onClick={() => setActiveTab('system')} icon={TerminalIcon} label="System Engine" />
+           <TabItem active={activeTab === 'network'} onClick={() => setActiveTab('network')} icon={NetworkIcon} label="Network & Core" />
+           <TabItem active={activeTab === 'system'} onClick={() => setActiveTab('system')} icon={TerminalIcon} label="Engine Paths" />
            <TabItem active={activeTab === 'security'} onClick={() => setActiveTab('security')} icon={ShieldIcon} label="Authentication" />
-           
         </div>
 
         {/* Settings Content Area */}
@@ -163,10 +201,55 @@ export default function SettingsPage() {
               </div>
            )}
 
+           {activeTab === 'network' && (
+              <div className="space-y-8 animate-in slide-in-from-right-2">
+                  <div>
+                    <h3 className="text-xl font-black tracking-tight mb-1">Network & Core v1.1</h3>
+                    <p className="text-xs text-neutral-500 font-bold uppercase tracking-tighter">Global protocol distribution and engine parameters</p>
+                  </div>
+                  
+                  <form onSubmit={handleUpdateGlobal} className="space-y-6 pt-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <SettingField label="Primary Server Address" sub="Main entry point for clients.">
+                          <input 
+                            value={globalSettings.server_address} 
+                            onChange={e => setGlobalSettings({...globalSettings, server_address: e.target.value})} 
+                            className="input font-bold h-12 rounded-2xl" 
+                            placeholder="e.g. node1.hivoid.io"
+                          />
+                      </SettingField>
+                      <SettingField label="Multi-Server List" sub="Comma-separated for resilience.">
+                          <input 
+                            value={globalSettings.servers} 
+                            onChange={e => setGlobalSettings({...globalSettings, servers: e.target.value})} 
+                            className="input font-bold h-12 rounded-2xl" 
+                            placeholder="node1:4433, node2:4433"
+                          />
+                      </SettingField>
+                    </div>
+
+                    <SettingField label="Global Core JSON Override" sub="Direct JSON configuration for advanced engine parameters.">
+                        <textarea 
+                          value={globalSettings.hivoid_config} 
+                          onChange={e => setGlobalSettings({...globalSettings, hivoid_config: e.target.value})} 
+                          className="input font-mono text-xs p-4 min-h-[200px] rounded-2xl resize-none" 
+                          placeholder='{ "anti_probe": true, "max_conns": 5000 }'
+                        />
+                    </SettingField>
+
+                    <div className="pt-8 border-t border-neutral-100 dark:border-neutral-800 flex justify-end">
+                       <button type="submit" disabled={settingsLoading} className="btn-primary px-12 h-12 rounded-2xl shadow-apple-lg text-sm font-black min-w-[200px]">
+                          {settingsLoading ? <LoaderIcon className="w-5 h-5 animate-spin" /> : <>Sync Global Config</>}
+                       </button>
+                    </div>
+                  </form>
+              </div>
+           )}
+
            {activeTab === 'system' && (
               <div className="space-y-8 animate-in slide-in-from-right-2">
                   <div>
-                    <h3 className="text-xl font-black tracking-tight mb-1">System Engine Paths</h3>
+                    <h3 className="text-xl font-black tracking-tight mb-1">Engine Paths</h3>
                     <p className="text-xs text-neutral-500 font-bold uppercase tracking-tighter">Internal directory & binary locations</p>
                  </div>
                  <div className="space-y-6 pt-4">
@@ -234,6 +317,8 @@ export default function SettingsPage() {
               </div>
            )}
         </div>
+      </div>
+
       {show2FAModal && (
         <TwoFAModal 
             enabled={totpEnabled} 
@@ -242,8 +327,7 @@ export default function SettingsPage() {
         />
       )}
     </div>
-  </div>
-);
+  );
 }
 
 function TwoFAModal({ enabled, onClose, onComplete }) {
@@ -391,10 +475,4 @@ function InfoTile({ icon: Icon, label, value }) {
   );
 }
 
-function SettingsIcon(props) {
-  return (
-    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>
-    </svg>
-  );
-}
+

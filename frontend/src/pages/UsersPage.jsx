@@ -229,7 +229,7 @@ function UserModal({ user, onClose, onSaved }) {
     data_limit_gb: user?.data_limit_gb || 0,
     bandwidth_limit: user?.bandwidth_limit || 0,
     expire_at: user?.expire_at || '',
-    mode: user?.mode || 'performance',
+    mode: user?.mode || 'adaptive',
     obfs: user?.obfs || 'none',
     enabled: user?.enabled ?? true,
     note: user?.note || '',

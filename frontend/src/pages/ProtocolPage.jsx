@@ -77,6 +77,7 @@ export default function ProtocolPage() {
               dns_upstream: parsed.dns_upstream || '8.8.8.8:53',
               insecure: parsed.insecure ?? true,
               pool_size: parsed.pool_size || 4,
+              servers: Array.isArray(parsed.servers) ? parsed.servers.join(", ") : '',
               note: parsed.note || ''
           });
       } finally {
@@ -117,6 +118,7 @@ export default function ProtocolPage() {
             allowed_hosts: config.allowed_hosts.split(',').map(s=>s.trim()).filter(Boolean),
             blocked_tags: config.blocked_tags.split(',').map(s=>s.trim()).filter(Boolean),
             bypass_ips: config.bypass_ips.split(',').map(s=>s.trim()).filter(Boolean),
+            servers: config.servers.split(',').map(s=>s.trim()).filter(Boolean),
         };
         await settingsApi.update({ hivoid_config: JSON.stringify(payload) });
         notify('Advanced configuration saved successfully.');
@@ -397,7 +399,12 @@ export default function ProtocolPage() {
                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-4">
                   <SettingRow label="SOCKS Port" sub="Local proxy port."><input type="number" value={config.socks_port} onChange={e => setConfig({...config, socks_port: parseInt(e.target.value) || 1080})} className="input" /></SettingRow>
                   <SettingRow label="DNS Port" sub="Local resolver port."><input type="number" value={config.dns_port} onChange={e => setConfig({...config, dns_port: parseInt(e.target.value) || 5353})} className="input" /></SettingRow>
-                  <SettingRow label="Pool size" sub="Connection pool."><input type="number" value={config.pool_size || 4} onChange={e => setConfig({...config, pool_size: parseInt(e.target.value) || 4})} className="input" /></SettingRow>
+                  <SettingRow label="Pool size" sub="Connection aggregation (1-16)."><input type="number" value={config.pool_size || 4} onChange={e => setConfig({...config, pool_size: parseInt(e.target.value) || 4})} className="input" min="1" max="16" /></SettingRow>
+                  <div className="md:col-span-2 lg:col-span-3">
+                    <SettingRow label="Multi-Server List (Resilience)" sub="Comma-separated IP:Port list. Core selects healthiest automatically.">
+                      <textarea value={config.servers} onChange={e => setConfig({...config, servers: e.target.value})} className="input min-h-[60px] font-mono text-xs py-3" placeholder="e.g. 1.1.1.1:443, 2.2.2.2:443" />
+                    </SettingRow>
+                  </div>
                   <div className="lg:col-span-2">
                     <SettingRow label="DNS Upstream" sub="Primary recursive resolver for clients.">
                       <input value={config.dns_upstream} onChange={e => setConfig({...config, dns_upstream: e.target.value})} className="input font-mono" />

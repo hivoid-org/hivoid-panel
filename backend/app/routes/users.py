@@ -253,12 +253,21 @@ def get_user_config_data(
         except Exception:
             pass
 
+    # Handle servers array
+    primary_server = settings.SERVER_ADDRESS or request.base_url.hostname
+    servers_list = [f"{primary_server}:4433"]
+    if ps and ps.servers:
+        servers_list = [s.strip() for s in ps.servers.split(",") if s.strip()]
+    elif ps and ps.server_address:
+        servers_list = [f"{ps.server_address}:4433"]
+
     # Construct client.json content
     client_json = {
         "uuid": user.uuid,
-        "server": settings.SERVER_ADDRESS or request.base_url.hostname,
+        "server": servers_list[0] if servers_list else primary_server,
+        "servers": servers_list,
         "port": 4433, # Standard Core port
-        "mode": user.mode or "performance",
+        "mode": user.mode or "adaptive",
         "obfs": user.obfs or "none",
         "socks_port": panel_config.get("socks_port", 1080),
         "dns_port": panel_config.get("dns_port", 5353),
@@ -269,8 +278,15 @@ def get_user_config_data(
         "bypass_ips": [ip.strip() for ip in (user.bypass_ips or panel_config.get("bypass_ips", "127.0.0.1/32,192.168.1.0/24")).split(",") if ip.strip()],
         "geoip_path": user.geoip_path or panel_config.get("geoip_path", "./geoip.dat"),
         "geosite_path": user.geosite_path or panel_config.get("geosite_path", "./geosite.dat"),
-        "direct_route": [r.strip() for r in (user.direct_route or panel_config.get("direct_route", "category-ads")).split(",") if r.strip()],
+        "direct_route": [r.strip() for r in (user.direct_route or "category-ads").split(",") if r.strip()],
+        "direct_geosite": [r.strip() for r in (user.direct_geosite or "").split(",") if r.strip()],
+        "direct_geoip": [r.strip() for r in (user.direct_geoip or "").split(",") if r.strip()],
+        "direct_domains": [r.strip() for r in (user.direct_domains or "").split(",") if r.strip()],
+        "direct_ips": [r.strip() for r in (user.direct_ips or "").split(",") if r.strip()],
+        "direct_dns_servers": [r.strip() for r in (user.direct_dns_servers or "").split(",") if r.strip()],
         "cert_pin": user.cert_pin or panel_config.get("cert_pin", ""),
+        "persistence": bool(user.persistence),
+        "state_file": user.state_file or "state.json",
         "name": user.name or user.email or "HiVoid Configuration"
     }
 
@@ -318,11 +334,20 @@ def public_config_subscription(
         except Exception:
             pass
 
+    # Handle servers array
+    primary_server = settings.SERVER_ADDRESS or request.base_url.hostname
+    servers_list = [f"{primary_server}:4433"]
+    if ps and ps.servers:
+        servers_list = [s.strip() for s in ps.servers.split(",") if s.strip()]
+    elif ps and ps.server_address:
+        servers_list = [f"{ps.server_address}:4433"]
+
     client_json = {
         "uuid": user.uuid,
-        "server": settings.SERVER_ADDRESS or request.base_url.hostname,
+        "server": servers_list[0] if servers_list else primary_server,
+        "servers": servers_list,
         "port": 4433,
-        "mode": user.mode or "performance",
+        "mode": user.mode or "adaptive",
         "obfs": user.obfs or "none",
         "socks_port": panel_config.get("socks_port", 1080),
         "dns_port": panel_config.get("dns_port", 5353),
@@ -333,8 +358,15 @@ def public_config_subscription(
         "bypass_ips": [ip.strip() for ip in (user.bypass_ips or panel_config.get("bypass_ips", "127.0.0.1/32,192.168.1.0/24")).split(",") if ip.strip()],
         "geoip_path": user.geoip_path or panel_config.get("geoip_path", "./geoip.dat"),
         "geosite_path": user.geosite_path or panel_config.get("geosite_path", "./geosite.dat"),
-        "direct_route": [r.strip() for r in (user.direct_route or panel_config.get("direct_route", "category-ads")).split(",") if r.strip()],
+        "direct_route": [r.strip() for r in (user.direct_route or "category-ads").split(",") if r.strip()],
+        "direct_geosite": [r.strip() for r in (user.direct_geosite or "").split(",") if r.strip()],
+        "direct_geoip": [r.strip() for r in (user.direct_geoip or "").split(",") if r.strip()],
+        "direct_domains": [r.strip() for r in (user.direct_domains or "").split(",") if r.strip()],
+        "direct_ips": [r.strip() for r in (user.direct_ips or "").split(",") if r.strip()],
+        "direct_dns_servers": [r.strip() for r in (user.direct_dns_servers or "").split(",") if r.strip()],
         "cert_pin": user.cert_pin or panel_config.get("cert_pin", ""),
+        "persistence": bool(user.persistence),
+        "state_file": user.state_file or "state.json",
         "name": user.name or user.email or "HiVoid Client"
     }
     return client_json

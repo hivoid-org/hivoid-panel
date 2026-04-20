@@ -51,7 +51,7 @@ class UserCreate(BaseModel):
     data_limit_gb: int = Field(default=0, ge=0)
     bandwidth_limit: int = Field(default=0, ge=0)  # KB/s
     expire_at: Optional[str] = None
-    mode: str = "performance"  # performance | high_performance | stealth | balanced | adaptive
+    mode: str = "adaptive"  # performance | high_performance | stealth | balanced | adaptive
     obfs: str = "none"         # none | random | http | tls | masque | webtransport | ghost
     enabled: bool = True
     note: Optional[str] = None
@@ -61,7 +61,14 @@ class UserCreate(BaseModel):
     geoip_path: Optional[str] = ""
     geosite_path: Optional[str] = ""
     direct_route: Optional[str] = ""
+    direct_geosite: Optional[str] = ""
+    direct_geoip: Optional[str] = ""
+    direct_domains: Optional[str] = ""
+    direct_ips: Optional[str] = ""
+    direct_dns_servers: Optional[str] = ""
     cert_pin: Optional[str] = ""
+    persistence: bool = True
+    state_file: str = "state.json"
     blocked_hosts: Optional[str] = ""
     blocked_tags: Optional[str] = ""
 
@@ -85,7 +92,14 @@ class UserUpdate(BaseModel):
     geoip_path: Optional[str] = None
     geosite_path: Optional[str] = None
     direct_route: Optional[str] = None
+    direct_geosite: Optional[str] = None
+    direct_geoip: Optional[str] = None
+    direct_domains: Optional[str] = None
+    direct_ips: Optional[str] = None
+    direct_dns_servers: Optional[str] = None
     cert_pin: Optional[str] = None
+    persistence: Optional[bool] = None
+    state_file: Optional[str] = None
     blocked_hosts: Optional[str] = None
     blocked_tags: Optional[str] = None
 
@@ -113,7 +127,14 @@ class UserResponse(BaseModel):
     geoip_path: str
     geosite_path: str
     direct_route: str
+    direct_geosite: str
+    direct_geoip: str
+    direct_domains: str
+    direct_ips: str
+    direct_dns_servers: str
     cert_pin: str
+    persistence: bool
+    state_file: str
     blocked_hosts: str
     blocked_tags: str
     created_at: datetime
@@ -127,6 +148,7 @@ class UserResponse(BaseModel):
 
 class PanelSettingsUpdate(BaseModel):
     server_address: Optional[str] = None
+    servers: Optional[str] = None
     panel_port: Optional[int] = Field(default=None, ge=1, le=65535)
     theme: Optional[str] = None  # dark | light
     hivoid_config: Optional[str] = None
@@ -134,6 +156,7 @@ class PanelSettingsUpdate(BaseModel):
 
 class PanelSettingsResponse(BaseModel):
     server_address: str
+    servers: Optional[str] = None
     panel_port: int
     theme: str
     hivoid_config: Optional[str] = None

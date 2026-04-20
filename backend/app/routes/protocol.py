@@ -127,7 +127,7 @@ def sync_server_config(db: Session) -> bool:
     config = {
         "server": {
             "listen": panel_config.get("listen") or f":{panel_config.get('port', 4433)}",
-            "mode": (panel_config.get("mode") or "performance").lower(),
+            "mode": (panel_config.get("mode") or "adaptive").lower(),
             "log_level": panel_config.get("log_level") or "info"
         },
         "name": panel_config.get("name") or "HiVoid-Node",
