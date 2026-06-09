@@ -21,7 +21,7 @@ from app.models import Admin, PanelSettings
 from app.auth import hash_password
 
 # Route imports
-from app.routes import auth, users, system, protocol, settings as settings_routes
+from app.routes import auth, users, system, protocol, hub, settings as settings_routes
 
 
 def _seed_admin():
@@ -70,7 +70,7 @@ try:
     with open(Path(__file__).resolve().parent.parent.parent / "version.json") as f:
         APP_VERSION = json.load(f)["version"]
 except Exception:
-    APP_VERSION = "v1.7.0"
+    APP_VERSION = "v2.0.0"
 
 # ─── App ────────────────────────────────────────────────────────────────────
 app = FastAPI(
@@ -102,6 +102,7 @@ app.include_router(users.router)
 app.include_router(system.router)
 app.include_router(protocol.router)
 app.include_router(settings_routes.router)
+app.include_router(hub.router)
 
 
 # ─── Health Check ────────────────────────────────────────────────────────────

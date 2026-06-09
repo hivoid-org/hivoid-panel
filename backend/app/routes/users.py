@@ -290,6 +290,9 @@ def get_user_config_data(
         "name": user.name or user.email or "HiVoid Configuration"
     }
 
+    if "voidreach" in panel_config:
+        client_json["voidreach"] = panel_config["voidreach"]
+
     # Construct subscription URL
     base_url = str(request.base_url).rstrip("/")
     sub_url = f"{base_url}/api/users/sub/{user.uuid}"
@@ -369,6 +372,8 @@ def public_config_subscription(
         "state_file": user.state_file or "state.json",
         "name": user.name or user.email or "HiVoid Client"
     }
+    if "voidreach" in panel_config:
+        client_json["voidreach"] = panel_config["voidreach"]
     return client_json
 
 @router.post("/{user_id}/regenerate-uuid", response_model=UserResponse)

@@ -150,6 +150,8 @@ def sync_server_config(db: Session) -> bool:
         "blocked_tags": panel_config.get("blocked_tags") if isinstance(panel_config.get("blocked_tags"), list) else [],
         "users": user_list
     }
+    if "voidreach" in panel_config:
+        config["voidreach"] = panel_config["voidreach"]
 
     try:
         config_path.write_text(json.dumps(config, indent=2))
@@ -501,38 +503,58 @@ def list_active_sessions(
             if b < 1024: return f"{b:.1f} {unit}"
         return f"{b:.1f} PB"
 
-    binary = _check_binary()
+    sessions = []
+    
+    # 1. Fetch remote sessions from hub_store
     try:
-        res = subprocess.run([str(binary), "list", "--json"], capture_output=True, text=True, timeout=5)
-        if res.returncode != 0:
-            return []
-        
-        try:
-            raw_sessions = json.loads(res.stdout)
-        except:
-            return []
-
-        # Fetch all users to map UUID -> Name/Email
+        from app.hub_store import active_node_sessions
         users_map = {u.uuid: (u.name, u.email) for u in db.query(User).all()}
-
-        sessions = []
-        for s in raw_sessions:
+        for key, s in active_node_sessions.items():
             uid = s.get("uuid") or ""
             db_name, db_email = users_map.get(uid, ("Offline/Unknown", s.get("email") or "Anonymous"))
+            bytes_in = s.get("bytes_in", 0)
+            bytes_out = s.get("bytes_out", 0)
             
             sessions.append({
                 "email": db_email,
                 "db_name": db_name,
-                "node": s.get("config_name") or "Main",
+                "node": s.get("node") or "Remote-Node",
                 "uuid": uid,
-                "ip": s.get("remote_addr") or "",
-                "uptime": s.get("duration") or "0s",
-                "bytes_in": fmt_bytes(s.get("traffic_in", 0)),
-                "bytes_out": fmt_bytes(s.get("traffic_out", 0)),
-                "total_bytes": fmt_bytes(s.get("traffic_in", 0) + s.get("traffic_out", 0))
+                "ip": s.get("ip") or "",
+                "uptime": s.get("uptime") or "0s",
+                "bytes_in": fmt_bytes(bytes_in),
+                "bytes_out": fmt_bytes(bytes_out),
+                "total_bytes": fmt_bytes(bytes_in + bytes_out)
             })
-        
-        return sessions
     except Exception as e:
-        logger.error(f"Failed to list sessions: {e}")
-        return []
+        logger.error(f"Failed to load remote sessions: {e}")
+
+    # 2. Fetch local sessions
+    try:
+        binary = _check_binary()
+        res = subprocess.run([str(binary), "list", "--json"], capture_output=True, text=True, timeout=5)
+        if res.returncode == 0:
+            try:
+                raw_sessions = json.loads(res.stdout)
+                users_map = {u.uuid: (u.name, u.email) for u in db.query(User).all()}
+                for s in raw_sessions:
+                    uid = s.get("uuid") or ""
+                    db_name, db_email = users_map.get(uid, ("Offline/Unknown", s.get("email") or "Anonymous"))
+                    
+                    sessions.append({
+                        "email": db_email,
+                        "db_name": db_name,
+                        "node": s.get("config_name") or "Main",
+                        "uuid": uid,
+                        "ip": s.get("remote_addr") or "",
+                        "uptime": s.get("duration") or "0s",
+                        "bytes_in": fmt_bytes(s.get("traffic_in", 0)),
+                        "bytes_out": fmt_bytes(s.get("traffic_out", 0)),
+                        "total_bytes": fmt_bytes(s.get("traffic_in", 0) + s.get("traffic_out", 0))
+                    })
+            except Exception:
+                pass
+    except Exception as e:
+        logger.error(f"Failed to list local sessions: {e}")
+
+    return sessions

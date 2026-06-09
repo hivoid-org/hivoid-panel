@@ -13,3 +13,4 @@ slowapi
 requests
 qrcode[pil]
 pyotp
+websockets
